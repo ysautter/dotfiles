@@ -1,3 +1,3 @@
 # My dotfiles
 
-Containg configurations for `vim`,  `i3`, etc.
+Containg configurations for `vim`,  `i3` and the `.bashrc`.
