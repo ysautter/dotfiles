@@ -332,7 +332,7 @@ exec --no-startup-id feh --bg-fill --randomize ~/Bilder/Wallpaper/wallhaven/*
 #exec --no-startup-id i3-msg workspace 2:
 
 # start program launcher
-bindsym $mod+d exec --no-startup-id rofi -show run -theme onedark -lines 5 -opacity "60"
+bindsym $mod+d exec --no-startup-id rofi -show run -theme solarized_alternate -lines 5 -opacity "60"
 bindsym $mod+Shift+d exec --no-startup-id i3-dmenu-desktop --dmenu='rofi -dmenu -theme onedark -lines 5 -opacity "60"'
 
 #Custom i3 colours
@@ -347,30 +347,31 @@ set $indicator-colour    #71F79F
 
  # exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 
-# Start i3bar to display a workspace bar (plus the system information i3status if available)
-#  bar {
-#      i3bar_command i3bar
-#      status_command i3blocks -c ~/.config/i3/i3blocks.conf
-#      position top
-#      tray_output primary
-#      bindsym button4 nop
-#      bindsym button5 nop
-#      font pango:Inconsolata Nerd Font Bold 11
-#      # strip_workspace_numbers yes
-#  
-#      colors {
-#          background $bg-color
-#          statusline #F9FAF9
-#          separator  #454947
-#  
-#          #                  border  	      	    background          text
-#          focused_workspace  $bg-color          	$bg-color          	$text-color
-#          active_workspace   $bg-color          	$bg-color          	$text-color
-#          inactive_workspace $inactive-bg-color 	$inactive-bg-color 	$inactive-text-color
-#          urgent_workspace   $urgent-bg-color   	$urgent-bg-color   	$bg-color
-#  	    binding_mode       $bg-color            $binding-bg-color  	$binding-text-color
-#      }
-#  }
+ #Start i3bar to display a workspace bar (plus the system information i3status if available)
+  #bar {
+      #i3bar_command i3bar
+      #status_command i3blocks -c ~/.config/i3/i3blocks.conf
+      #position top
+      #tray_output primary
+      #bindsym button4 nop
+      #bindsym button5 nop
+      #font pango:Inconsolata Nerd Font Bold 11
+      ## strip_workspace_numbers yes
+  
+      #colors {
+          #background $bg-color
+          #statusline #F9FAF9
+          #separator  #454947
+  
+          ##                  border  	      	    background          text
+          #focused_workspace  $bg-color          	$bg-color          	$text-color
+          #active_workspace   $bg-color          	$bg-color          	$text-color
+          #inactive_workspace $inactive-bg-color 	$inactive-bg-color 	$inactive-text-color
+          #urgent_workspace   $urgent-bg-color   	$urgent-bg-color   	$bg-color
+          #binding_mode       $bg-color            $binding-bg-color  	$binding-text-color
+      #}
+#}
+
  bar {
      font pango:DejaVu Sans Mono, FontAwesome 12
      position top

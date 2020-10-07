@@ -101,7 +101,7 @@ alias mux='tmuxinator'
 function cs () {
 	cd "$@" && ls
 }
-alias conifg='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
 
 
 xhost +local:root > /dev/null 2>&1
