@@ -29,6 +29,11 @@ Plug 'dpelle/vim-LanguageTool'
 Plug 'ycm-core/YouCompleteMe'
 "Plug 'plasticboy/vim-markdown'
 Plug 'suan/vim-instant-markdown', {'for': 'markdown'}
+Plug 'mattn/emmet-vim'
+Plug 'Yggdroot/indentLine'
+Plug 'yuezk/vim-js'
+Plug 'maxmellon/vim-jsx-pretty'
+Plug 'dense-analysis/ale'
 call plug#end()
 
 "map <leader>nn :NERDTreeToggle<cr>
