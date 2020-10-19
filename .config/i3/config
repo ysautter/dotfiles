@@ -54,7 +54,8 @@ bindsym $mod+Ctrl+m exec $terminal 'alsamixer'
 
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume 0 +5%
 bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume 0 -5%
-
+bindsym XF86MonBrightnessUp exec --no-startup-id xbacklight -inc 10
+bindsym XF86MonBrightnessDown exec --no-startup-id xbacklight -dec 10
 ################################################################################################
 
 
@@ -315,7 +316,7 @@ exec --no-startup-id all-in-one
 #exec --no-startup-id discord
 #exec --no-startup-id mopidy
 exec --no-startup-id xset r rate 200 25
-exec --no-startup-id feh --bg-fill --randomize ~/Bilder/Wallpaper/wallhaven/*
+exec --no-startup-id feh --bg-fill --randomize ~/Pictures/Wallpapers/*
 #exec --no-startup-id kitty ---class __scratchpad
 #for_window [class="__scratchpad"] move sratchpad
 
@@ -405,7 +406,7 @@ client.background       $bg-color
 #############################
 
 # Set inner/outer gaps
-gaps inner 30
+gaps inner 27
 gaps outer -2
 
 # Additionally, you can issue commands with the following syntax. This is useful to bind keys to changing the gap size.

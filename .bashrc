@@ -166,6 +166,8 @@ export PATH=$ANDROID_SDK_ROOT/tools:$ANDROID_SDK_ROOT/platform-tools:$PATH
 
 export PATH="/home/yannick/Programme/android_studio/bin":$PATH
 
+export PATH="/home/yannick/bin/pycharm/bin":$PATH
+
 # Add environment variable COCOS_CONSOLE_ROOT for cocos2d-x
 export COCOS_CONSOLE_ROOT="/opt/cocos2d-x-3.17/tools/cocos2d-console/bin"
 export PATH=$COCOS_CONSOLE_ROOT:$PATH
@@ -201,4 +203,29 @@ __complete_ssh_host() {
 
 complete -F __complete_ssh_host ssh
 complete -f -F __complete_ssh_host scp
+
+
+NPM_PACKAGES="${HOME}/.npm-packages"
+
+export PATH="$PATH:$NPM_PACKAGES/bin"
+
+# Preserve MANPATH if you already defined it somewhere in your config.
+# Otherwise, fall back to `manpath` so we can inherit from `/etc/manpath`.
+export MANPATH="${MANPATH-$(manpath)}:$NPM_PACKAGES/share/man"
+
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/home/yannick/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/home/yannick/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "/home/yannick/miniconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="/home/yannick/miniconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
 

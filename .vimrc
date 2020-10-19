@@ -5,6 +5,7 @@ if empty(glob('~/.vim/autoload/plug.vim'))
      \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
     autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
 endif
+
 source ~/.vim_runtime/vimrcs/plugins.vim
 source ~/.vim_runtime/vimrcs/basic.vim
 source ~/.vim_runtime/vimrcs/filetypes.vim
@@ -25,6 +26,10 @@ let maplocalleader = ','
 vmap Si S(i_<esc>f)
 au FileType mako vmap Si S"i${ _(<esc>2f"a) }<esc>
 
+if has('persistend_undo')
+    set undofile
+    set undodir=$HOME/.vim/undo
+endif
 
 set directory^=$HOME/.vim/tmp//
 " Change tab to 4 spaces
