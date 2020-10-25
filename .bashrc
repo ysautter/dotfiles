@@ -182,6 +182,7 @@ export PATH=$COCOS_TEMPLATES_ROOT:$PATH
 
 export PATH="$HOME/.npm-global/bin:$PATH"
 
+export PATH="$HOME/.local/bin:$PATH"
 
 __complete_ssh_host() {
     local KNOWN_FILE=~/.ssh/known_hosts
