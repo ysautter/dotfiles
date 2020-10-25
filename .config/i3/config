@@ -24,7 +24,7 @@ bindsym $mod+y border pixel 1
 # Font for window titles. Will also be used by the bar unless a different font
 # is used in the bar {} block below.
 font pango:Montserrat-regular 10
-
+#font pango:DejaVu Sans Mono, FontAwesome 10
 # Use Mouse+$mod to drag floating windows
 floating_modifier $mod
 
@@ -220,7 +220,8 @@ assign [class="discord"] $ws6
 assign [class="Rambox"] $ws6
 
 # Xfce4-Terminal overlay
-bindsym Mod1+Ctrl+t exec --no-startup-id xfce4-terminal --drop-down
+#bindsym Mod1+Ctrl+t exec --no-startup-id xfce4-terminal --drop-down
+bindsym Mod1+Ctrl+t exec --no-startup-id st -c "floating"
 
 # Open specific applications in floating mode
 for_window [class="xfce4-terminal|Xfce4-terminal"] floating enable border 1
@@ -230,6 +231,7 @@ for_window [class="login|Dialog"] floating enable boarder normal
 for_window [class="Zeiterfassung|Hamster"] floating enable boarder normal
 for_window [title="alsamixer"] floating enable border pixel 1
 for_window [class="Clipgrab"] floating enable
+for_window [class="floating"] floating enable enable
 for_window [title="i3_help"] floating enable sticky enable border normal
 for_window [class="Lxappearance"] floating enable sticky enable border normal
 for_window [class="Manjaro-hello"] floating enable
@@ -317,6 +319,7 @@ exec --no-startup-id all-in-one
 #exec --no-startup-id mopidy
 exec --no-startup-id xset r rate 200 25
 exec --no-startup-id feh --bg-fill --randomize ~/Pictures/Wallpapers/*
+exec --no-startup-id dockd --daemon
 #exec --no-startup-id kitty ---class __scratchpad
 #for_window [class="__scratchpad"] move sratchpad
 
