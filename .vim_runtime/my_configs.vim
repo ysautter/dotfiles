@@ -1,5 +1,5 @@
 " for making TGMC
-au BufEnter ~/Dokumente/tuxguard/TGMC_dev/public/* nnoremap <F4> :Make<CR>
+au BufEnter ~/Dokumente/tuxguard/TGMC/public/* nnoremap <F4> :Make<CR>
 
 " make YCM compatible with UltiSnips (using supertab)
 let g:ycm_key_list_select_completion = ['<C-n>', '<Down>']
