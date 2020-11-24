@@ -184,6 +184,8 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 
 export PATH="$HOME/.local/bin:$PATH"
 
+export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+
 __complete_ssh_host() {
     local KNOWN_FILE=~/.ssh/known_hosts
     if [ -r $KNOWN_FILE ] ; then
