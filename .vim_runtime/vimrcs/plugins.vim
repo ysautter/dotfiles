@@ -6,6 +6,8 @@ Plug 'lervag/vimtex'
 let g:tex_flavor='latex'
 let g:vimtex_view_method='zathura'
 let g:vimtex_quickfix_mode=0
+set conceallevel=1
+let g:tex_conceal='abdmg'
 Plug 'morhetz/gruvbox'
 Plug 'sirver/ultisnips'
 Plug 'honza/vim-snippets'
@@ -25,15 +27,26 @@ Plug 'vim-airline/vim-airline-themes'
 Plug 'tpope/vim-dispatch'
 Plug 'idanarye/vim-merginal'
 Plug 'ervandew/supertab'
+" make YCM compatible with UltiSnips (using supertab)
+  let g:ycm_key_list_select_completion = ['<C-n>', '<Down>']
+  let g:ycm_key_list_previous_completion = ['<C-p>', '<Up>']
+  let g:SuperTabDefaultCompletionType = '<C-n>'
 Plug 'dpelle/vim-LanguageTool'
 Plug 'ycm-core/YouCompleteMe'
 "Plug 'plasticboy/vim-markdown'
 Plug 'suan/vim-instant-markdown', {'for': 'markdown'}
+  let g:instant_markdown_mathjax = 1
 Plug 'mattn/emmet-vim'
-Plug 'Yggdroot/indentLine'
+Plug 'christoomey/vim-tmux-navigator'
 Plug 'yuezk/vim-js'
 Plug 'maxmellon/vim-jsx-pretty'
 Plug 'dense-analysis/ale'
+Plug 'vimwiki/vimwiki'
+Plug   'KeitaNakamura/tex-conceal.vim', {'for': 'tex'}
+Plug 'chrisbra/colorizer'
+Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
+Plug 'jyyan/vim-volt-syntax'
+Plug 'glench/vim-jinja2-syntax'
 call plug#end()
 
 "map <leader>nn :NERDTreeToggle<cr>

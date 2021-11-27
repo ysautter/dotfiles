@@ -69,3 +69,10 @@ fi
 
 
 exec i3 --shmlog-size=26214400
+#while true; do 
+    #xsetroot -name "$( date +"%F %R" )"
+    #sleep 1m
+#done &
+#feh --bg-fill --randomize ~/Pictures/Wallpapers/* &
+#compton -b --config ~/.config/compton.blur.conf --experimental-backends
+#exec dwm

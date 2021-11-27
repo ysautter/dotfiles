@@ -56,6 +56,8 @@ bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume 0 +5%
 bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume 0 -5%
 bindsym XF86MonBrightnessUp exec --no-startup-id xbacklight -inc 10
 bindsym XF86MonBrightnessDown exec --no-startup-id xbacklight -dec 10
+bindsym Shift+XF86MonBrightnessDown exec --no-startup-id xbacklight -dec 1
+bindsym Shift+XF86MonBrightnessUp exec --no-startup-id xbacklight -inc 1
 ################################################################################################
 
 
@@ -103,6 +105,12 @@ bindsym $mod+Shift+h move left
 bindsym $mod+Shift+j move down
 bindsym $mod+Shift+k move up
 bindsym $mod+Shift+l move right
+
+# move workspace to desktop
+bindsym $mod+Ctrl+h move workspace to output left
+bindsym $mod+Ctrl+j move workspace to output down
+bindsym $mod+Ctrl+k move workspace to output up
+bindsym $mod+Ctrl+l move workspace to output right
 
 # alternatively, you can use the cursor keys:
 bindsym $mod+Shift+Left move left
@@ -155,12 +163,12 @@ bindsym $mod+Ctrl+Left workspace prev
 # to display names or symbols instead of plain workspace numbers you can use
 # something like: set $ws1 1:mail
 #                 set $ws2 2:
-set $ws1 1:
-set $ws2 2:
-set $ws3 3:
-set $ws4 4:
-set $ws5 5:
-set $ws6 6:
+set $ws1 1
+set $ws2 2
+set $ws3 3
+set $ws4 4
+set $ws5 5
+set $ws6 6
 set $ws7 7
 set $ws8 8
 
@@ -210,12 +218,15 @@ workspace $ws5 output HDMI-A-1
 assign [class="ranger"] $ws1
 assign [class="gotop"] $ws1
 assign [class="Firefox|firefox"] $ws2
+assign [class="zoom"] $ws4
 assign [class="Steam"] $ws5
 assign [class="Lutris"] $ws5
 assign [class="Code"] $ws4
 assign [class="spotify|Spotify"] $ws4
 assign [instance="mpsyt"] $ws5
 assign [class="All-in-One Messenger|all-in-one messenger"] $ws6
+assign [class="Skype|skype"] $ws6
+assign [class="Signal|signal"] $ws6
 assign [class="discord"] $ws6
 assign [class="Rambox"] $ws6
 
@@ -247,7 +258,10 @@ for_window [class="Blueman-manager"] floating enable
 for_window [class="Arandr"] floating enable
 for_window [class="Pavucontrol"] floating enable
 for_window [class="Galculator"] floating enable
+for_window [class="SimpleScreenRecorder"] floating enable
 #for_window [class="jetbrains-pycharm"] floating enable
+# glitchy background fix
+for_window [class="^.*"] border pixel 0
 
 # reload the configuration file
 bindsym $mod+Shift+c reload
@@ -304,6 +318,8 @@ bindsym $mod+9 exec --no-startup-id blurlock
 exec_always --no-startup-id fix_xcursor
 exec_always --no-startup-id xrandr --output DisplayPort-0 --mode 1920x1080 --rate 144 --primary --output HDMI-A-1 --auto --left-of DisplayPort-0
 exec_always --no-startup-id compton -b --config ~/.config/compton.blur.conf --experimental-backends
+exec_always --no-startup-id ~/.config/polybar/shapes/launch.sh &
+#exec_always --no-startup-id ~/.config/polybar/shapes/scripts/pywal.sh 
 
 # Exec on startup
 exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
@@ -314,6 +330,8 @@ exec --no-startup-id pamac-tray
 exec --no-startup-id $terminal --name "home" --hold ranger
 exec --no-startup-id firefox
 exec --no-startup-id all-in-one
+exec --no-startup-id signal-desktop
+exec --no-startup-id skypeforlinux
 #exec --no-startup-id variety
 #exec --no-startup-id discord
 #exec --no-startup-id mopidy
@@ -376,22 +394,22 @@ set $indicator-colour    #71F79F
       #}
 #}
 
- bar {
-     font pango:DejaVu Sans Mono, FontAwesome 12
-     position top
-     # tray_output none
-     status_command /bin/i3status-rs ~/.config/i3/status.toml
-     colors {
-         background $bg-color
-         statusline #F9FAF9
-         separator  #454947
-         focused_workspace  $bg-color          	$bg-color          	$text-color
-         active_workspace   $bg-color          	$bg-color          	$text-color
-         inactive_workspace $inactive-bg-color 	$inactive-bg-color 	$inactive-text-color
-         urgent_workspace   $urgent-bg-color   	$urgent-bg-color   	$bg-color
-         binding_mode       $bg-color            $binding-bg-color  	$binding-text-color
-    }
-}
+ #bar {
+     #font pango:DejaVu Sans Mono, FontAwesome 12
+     #position top
+     ## tray_output none
+     #status_command /bin/i3status-rs ~/.config/i3/status.toml
+     #colors {
+         #background $bg-color
+         #statusline #F9FAF9
+         #separator  #454947
+         #focused_workspace  $bg-color          	$bg-color          	$text-color
+         #active_workspace   $bg-color          	$bg-color          	$text-color
+         #inactive_workspace $inactive-bg-color 	$inactive-bg-color 	$inactive-text-color
+         #urgent_workspace   $urgent-bg-color   	$urgent-bg-color   	$bg-color
+         #binding_mode       $bg-color            $binding-bg-color  	$binding-text-color
+    #}
+#}
 # hide/unhide i3status bar
 bindsym $mod+m bar mode toggle
 

@@ -95,7 +95,9 @@ alias df='df -h'                          # human-readable sizes
 alias free='free -m'                      # show sizes in MB
 alias np='nano -w PKGBUILD'
 alias more=less
-alias ls='lsd'
+alias ls='exa'
+alias ll='exa -lhF'
+alias la='exa -lahF'
 #alias vim='nvim'
 alias mux='tmuxinator'
 function cs () {
@@ -232,3 +234,4 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 
+export LC_ALL="en_US.UTF-8"
