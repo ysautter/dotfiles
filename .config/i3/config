@@ -46,11 +46,11 @@ bindsym $mod+z exec --no-startup-id morc_menu
 ################################################################################################
 
 exec --no-startup-id volumeicon
-bindsym $mod+Ctrl+m exec $terminal 'alsamixer'
+# bindsym $mod+Ctrl+m exec $terminal 'alsamixer'
 #bindsym $mod+Ctrl+m exec $terminal -e 'alsamixer'
 # exec --no-startup-id pulseaudio
 # exec --no-startup-id pa-applet
-# bindsym $mod+Ctrl+m exec pavucontrol
+bindsym $mod+Ctrl+m exec pavucontrol
 
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume 0 +5%
 bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume 0 -5%
@@ -77,6 +77,9 @@ bindsym $mod+Ctrl+x --release exec --no-startup-id xkill
 
 bindsym $mod+n exec --no-startup-id networkmanager_dmenu -l 50
 bindsym $mod+c exec $terminal -e vim /home/yannick/.config/i3/config
+
+# toggle clipmenu
+bindsym $mod+x exec --no-startup-id clipmenu
 
 
 # focus_follows_mouse no
@@ -219,7 +222,6 @@ assign [class="ranger"] $ws1
 assign [class="gotop"] $ws1
 assign [class="Firefox|firefox"] $ws2
 assign [class="zoom"] $ws4
-assign [class="Steam"] $ws5
 assign [class="Lutris"] $ws5
 assign [class="Code"] $ws4
 assign [class="spotify|Spotify"] $ws4
@@ -228,6 +230,8 @@ assign [class="All-in-One Messenger|all-in-one messenger"] $ws6
 assign [class="Skype|skype"] $ws6
 assign [class="Signal|signal"] $ws6
 assign [class="discord"] $ws6
+assign [class="telegram|Telegram"] $ws6
+assign [class="Slack|slack"] $ws6
 assign [class="Rambox"] $ws6
 
 # Xfce4-Terminal overlay
@@ -259,6 +263,7 @@ for_window [class="Arandr"] floating enable
 for_window [class="Pavucontrol"] floating enable
 for_window [class="Galculator"] floating enable
 for_window [class="SimpleScreenRecorder"] floating enable
+for_window [title="^Origin$"] floating enable, fullscreen disable
 #for_window [class="jetbrains-pycharm"] floating enable
 # glitchy background fix
 for_window [class="^.*"] border pixel 0
@@ -276,7 +281,7 @@ bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcu
 
 # Set shut down, restart and locking features
 bindsym $mod+0 mode "$mode_system"
-set $mode_system (Shift+l)ock, (l)ogout, switch_(u)ser, (r)eboot, (s)hutdown
+set $mode_system (Shift+l)ock, (l)ogout, switch_(u)ser, (r)eboot, (s)hutdown)
 mode "$mode_system" {
     bindsym Shift+l exec --no-startup-id i3exit lock, mode "default"
     bindsym u exec --no-startup-id i3exit switch_user, mode "default"
@@ -320,6 +325,7 @@ bindsym $mod+9 exec --no-startup-id blurlock
 exec_always --no-startup-id fix_xcursor
 exec_always --no-startup-id xrandr --output DisplayPort-0 --mode 1920x1080 --rate 144 --primary --output HDMI-A-1 --auto --left-of DisplayPort-0
 exec_always --no-startup-id compton -b --config ~/.config/compton.blur.conf --experimental-backends
+exec_always --no-startup-id clipmenud
 exec_always --no-startup-id ~/.config/polybar/shapes/launch.sh &
 #exec_always --no-startup-id ~/.config/polybar/shapes/scripts/pywal.sh 
 
@@ -333,7 +339,11 @@ exec --no-startup-id $terminal --name "home" --hold ranger
 exec --no-startup-id firefox
 exec --no-startup-id all-in-one
 exec --no-startup-id signal-desktop
+exec --no-startup-id discord
+exec --no-startup-id telegram-desktop
+exec --no-startup-id slack
 exec --no-startup-id skypeforlinux
+exec --no-startup-id /home/yannick/.screenlayout/default.sh
 #exec --no-startup-id variety
 #exec --no-startup-id discord
 #exec --no-startup-id mopidy
