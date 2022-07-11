@@ -3,13 +3,13 @@
 export PATH=$HOME/bin:$HOME/.local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-export ZSH="/home/yannick/.oh-my-zsh"
+#export ZSH="/home/yannick/.oh-my-zsh"
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="clean-y"
+#ZSH_THEME="clean-y"
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -71,26 +71,28 @@ ZSH_THEME="clean-y"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(
-    git
-    python
-    pip
-    archlinux
-    cp
-    vi-mode
-    themes
-    ssh-agent
-    zsh-autosuggestions
-    zsh-completions
-    tmux
-    )
-autoload -U compinit && compinit
+#plugins=(
+    #git
+    #python
+    #pip
+    #archlinux
+    #docker
+    #docker-compose
+    #cp
+    #vi-mode
+    #themes
+    #ssh-agent
+    #zsh-autosuggestions
+    #zsh-completions
+    #tmux
+    #)
+#autoload -U compinit && compinit
 
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#B3AFB0"
+#ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#B3AFB0"
 
-source $ZSH/oh-my-zsh.sh
+#source $ZSH/oh-my-zsh.sh
 
-bindkey "^ " autosuggest-accept
+#bindkey "^ " autosuggest-accept
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
@@ -116,5 +118,89 @@ bindkey "^ " autosuggest-accept
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
+
+HISTFILE=~/.zsh_history
+HISTSIZE=1000000
+SAVEHIST=1000000
+setopt appendhistory
+setopt sharehistory
+setopt incappendhistory
+
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#B3AFB0"
+
+alias ls='lsd'
+alias l='ls -lFh'     #size,show type,human readable
+alias la='ls -lAFh'   #long list,show almost all,show type,human readable
+alias lr='ls -tRFh'   #sorted by date,recursive,show type,human readable
+alias lt='ls -ltFh'   #long list,sorted by date,show type,human readable
+alias ll='ls -l'      #long list
+alias ldot='ls -ld .*'
+alias lS='ls -1FSsh'
+
 export EDITOR='vim'
 alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+export XDG_CONFIG_HOME="$HOME/.config"
+
+### Added by Zinit's installer
+if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
+    print -P "%F{33} %F{220}Installing %F{33}ZDHARMA-CONTINUUM%F{220} Initiative Plugin Manager (%F{33}zdharma-continuum/zinit%F{220})…%f"
+    command mkdir -p "$HOME/.local/share/zinit" && command chmod g-rwX "$HOME/.local/share/zinit"
+    command git clone https://github.com/zdharma-continuum/zinit "$HOME/.local/share/zinit/zinit.git" && \
+        print -P "%F{33} %F{34}Installation successful.%f%b" || \
+        print -P "%F{160} The clone has failed.%f%b"
+fi
+
+source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
+autoload -Uz _zinit
+(( ${+_comps} )) && _comps[zinit]=_zinit
+
+# Load a few important annexes, without Turbo
+# (this is currently required for annexes)
+zinit light-mode for \
+    zdharma-continuum/zinit-annex-as-monitor \
+    zdharma-continuum/zinit-annex-bin-gem-node \
+    zdharma-continuum/zinit-annex-patch-dl \
+    zdharma-continuum/zinit-annex-rust
+
+### End of Zinit's installer chunk
+load=light
+
+zinit $load willghatch/zsh-saneopt
+
+zinit $load mafredri/zsh-async
+zinit $load rupa/z
+
+zinit ice pick"async.zsh" src"pure.zsh" atload""
+zinit $load sindresorhus/pure
+
+zstyle :prompt:pure:prompt:success color green
+
+#zinit ice nocompile:! pick:c.zsh atpull:%atclone atclone:'dircolors -b LS_COLORS > c.zsh'
+#zinit $load trapd00r/LS_COLORS
+
+zinit ice silent wait:1 atload:_zsh_autosuggest_start
+zinit $load zsh-users/zsh-autosuggestions
+
+ZSH_AUTOSUGGEST_STRATEGY=(history)
+zinit ice blockf; zinit $load zsh-users/zsh-completions
+
+zinit ice silent wait:1; zinit $load mollifier/cd-gitroot
+zinit ice silent wait:1; zinit $load micha/resty
+zinit ice silent wait:1; zinit $load supercrabtree/k
+
+zinit ice silent wait!1 atload"ZINIT[COMPINIT_OPTS]=-C; zpcompinit"
+
+zinit wait lucid for \
+  atinit"zicompinit; zicdreplay"  \
+      zdharma/fast-syntax-highlighting \
+      OMZP::colored-man-pages \
+
+zinit wait lucid for \
+  as"completion" \
+    OMZP::docker/_docker \
+    OMZP::docker-compose/_docker-compose
+
+
+zinit wait lucid for \
+    OMZP::ssh-agent
+
