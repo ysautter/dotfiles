@@ -204,6 +204,8 @@ zinit wait lucid for \
 zinit wait lucid for \
     OMZP::ssh-agent
 
+bindkey "^?" backward-delete-char
+
 #=======
 #
 #
