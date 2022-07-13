@@ -16,6 +16,6 @@ if type "xrandr"; then
     done
 else
     # Launch the bar
-    polybar -q main -c "$DIR"/config.ini &
+    /usr/bin/polybar -q main -c "$DIR"/config.ini &
 fi
 

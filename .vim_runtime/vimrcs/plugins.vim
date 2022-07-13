@@ -48,8 +48,9 @@ Plug 'ervandew/supertab'
 Plug 'dpelle/vim-LanguageTool'
 Plug 'ycm-core/YouCompleteMe'
 "Plug 'plasticboy/vim-markdown'
-Plug 'suan/vim-instant-markdown', {'for': 'markdown'}
-  let g:instant_markdown_mathjax = 1
+"Plug 'suan/vim-instant-markdown', {'for': 'markdown', 'do': 'yarn install'}
+  "let g:instant_markdown_autostart = 0
+  "let g:instant_markdown_mathjax = 1
 Plug 'mattn/emmet-vim'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'yuezk/vim-js'

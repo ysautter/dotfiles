@@ -67,7 +67,8 @@ fi
 	#echo "dbus-launch ${dbus_args[*]}"
 #}
 
-
+#export DESKTOP_SESSION=plasma
+#exec startplasma-x11
 exec i3 --shmlog-size=26214400
 #while true; do 
     #xsetroot -name "$( date +"%F %R" )"
