@@ -27,8 +27,8 @@ vmap Si S(i_<esc>f)
 au FileType mako vmap Si S"i${ _(<esc>2f"a) }<esc>
 
 if has('persistend_undo')
-   "set undofile
-   "set undodir=$HOME/.vim/undo
+   set undofile
+   set undodir=$HOME/.vim/undo
 endif
 
 set directory^=$HOME/.vim/tmp//

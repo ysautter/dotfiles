@@ -126,6 +126,8 @@ setopt appendhistory
 setopt sharehistory
 setopt incappendhistory
 
+setopt no_auto_remove_slash
+
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#B3AFB0"
 
 alias ls='lsd'
@@ -137,9 +139,11 @@ alias ll='ls -l'      #long list
 alias ldot='ls -ld .*'
 alias lS='ls -1FSsh'
 
+
 export EDITOR='vim'
 alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
 export XDG_CONFIG_HOME="$HOME/.config"
+export PATH=$HOME/opt:/usr/local/bin:$PATH
 
 ### Added by Zinit's installer
 if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
@@ -175,6 +179,10 @@ zinit $load sindresorhus/pure
 
 zstyle :prompt:pure:prompt:success color green
 
+zstyle ':completion:*' menu select
+zmodload zsh/complist
+
+
 #zinit ice nocompile:! pick:c.zsh atpull:%atclone atclone:'dircolors -b LS_COLORS > c.zsh'
 #zinit $load trapd00r/LS_COLORS
 
@@ -205,6 +213,11 @@ zinit wait lucid for \
     OMZP::ssh-agent
 
 bindkey "^?" backward-delete-char
+
+bindkey -M menuselect 'h' vi-backward-char
+bindkey -M menuselect 'k' vi-up-line-or-history
+bindkey -M menuselect 'l' vi-forward-char
+bindkey -M menuselect 'j' vi-down-line-or-history
 
 #=======
 #
