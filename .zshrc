@@ -182,6 +182,8 @@ zstyle :prompt:pure:prompt:success color green
 zstyle ':completion:*' menu select
 zmodload zsh/complist
 
+zstyle ':completion:*' special-dirs true
+
 
 #zinit ice nocompile:! pick:c.zsh atpull:%atclone atclone:'dircolors -b LS_COLORS > c.zsh'
 #zinit $load trapd00r/LS_COLORS
