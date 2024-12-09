@@ -47,6 +47,11 @@ Plug 'ervandew/supertab'
   let g:SuperTabDefaultCompletionType = '<C-n>'
 Plug 'dpelle/vim-LanguageTool'
 Plug 'ycm-core/YouCompleteMe'
+Plug 'godlygeek/tabular'
+Plug 'preservim/vim-markdown'
+  let g:tex_conceal = ""
+  let g:vim_markdown_math = 1
+  let g:vim_markdown_folding_disabled = 1
 "Plug 'plasticboy/vim-markdown'
 "Plug 'suan/vim-instant-markdown', {'for': 'markdown', 'do': 'yarn install'}
   "let g:instant_markdown_autostart = 0
@@ -56,12 +61,13 @@ Plug 'christoomey/vim-tmux-navigator'
 Plug 'yuezk/vim-js'
 Plug 'maxmellon/vim-jsx-pretty'
 Plug 'dense-analysis/ale'
-Plug 'vimwiki/vimwiki'
+"Plug 'vimwiki/vimwiki'
 Plug   'KeitaNakamura/tex-conceal.vim', {'for': 'tex'}
 Plug 'chrisbra/colorizer'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
 Plug 'jyyan/vim-volt-syntax'
 Plug 'glench/vim-jinja2-syntax'
+Plug 'kshenoy/vim-signature'
 call plug#end()
 
 "map <leader>nn :NERDTreeToggle<cr>

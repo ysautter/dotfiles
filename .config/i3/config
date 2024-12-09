@@ -63,20 +63,26 @@ bindsym Shift+XF86MonBrightnessUp exec --no-startup-id xbacklight -inc 1
 
 
 # Start Applications
-bindsym $mod+Ctrl+b exec $terminal bmenu
+#bindsym $mod+Ctrl+b exec $terminal bmenu
 # bindsym $mod+F3 exec pcmanfm
 bindsym $mod+F3 exec ranger
 bindsym $mod+F5 exec $terminal mocp
 bindsym $mod+t exec --no-startup-id pkill compton
 bindsym $mod+Ctrl+t exec --no-startup-id compton -b --config ~/.config/compton.blur.conf --experimental-backends
 bindsym Print exec --no-startup-id i3-scrot
-bindsym $mod+Print --release exec --no-startup-id i3-scrot -w
+#bindsym $mod+Print --release exec --no-startup-id i3-scrot -w
+#bindsym $mod+Print exec --no-startup-id flameshot gui
+bindsym $mod+minus exec --no-startup-id flameshot gui
 bindsym $mod+Shift+Print --release exec --no-startup-id i3-scrot -s
 #bindsym $mod+Shift+h exec xdg-open /usr/share/doc/manjaro/i3_help.pdf
 bindsym $mod+Ctrl+x --release exec --no-startup-id xkill
 
 bindsym $mod+n exec --no-startup-id networkmanager_dmenu -l 50
 bindsym $mod+c exec $terminal -e vim /home/yannick/.config/i3/config
+bindsym $mod+Ctrl+b exec --no-startup-id /home/yannick/.screenlayout/beamer2.sh
+bindsym $mod+Ctrl+Shift+b exec --no-startup-id /home/yannick/.screenlayout/beamer.sh
+bindsym $mod+Ctrl+d exec --no-startup-id /home/yannick/.screenlayout/default.sh
+bindsym $mod+Ctrl+a exec --no-startup-id /home/yannick/opt/toggleaudio.sh
 
 # toggle clipmenu
 bindsym $mod+x exec --no-startup-id clipmenu
@@ -224,9 +230,10 @@ assign [class="Firefox|firefox"] $ws2
 assign [class="zoom"] $ws4
 assign [class="Lutris"] $ws5
 assign [class="Code"] $ws4
-assign [class="spotify|Spotify"] $ws4
+assign [class="spotify|Spotify"] $ws7
 assign [instance="mpsyt"] $ws5
 assign [class="All-in-One Messenger|all-in-one messenger"] $ws6
+assign [class="Thunderbird|thunderbird"] $ws6
 assign [class="Skype|skype"] $ws6
 assign [class="Signal|signal"] $ws6
 assign [class="discord"] $ws6
@@ -324,9 +331,10 @@ bindsym $mod+9 exec --no-startup-id blurlock
 
 # Always start these apps
 exec_always --no-startup-id fix_xcursor
-exec_always --no-startup-id xrandr --output DisplayPort-0 --mode 1920x1080 --rate 144 --primary --output HDMI-A-1 --auto --left-of DisplayPort-0
-exec_always --no-startup-id compton -b --config ~/.config/compton.blur.conf --experimental-backends
+#exec_always --no-startup-id xrandr --output DisplayPort-0 --mode 1920x1080 --rate 144 --primary --output HDMI-A-1 --auto --left-of DisplayPort-0
+exec_always --no-startup-id compton -b --config ~/.config/compton.blur.conf
 exec_always --no-startup-id clipmenud
+exec_always --no-startup-id xmousepasteblock
 exec_always --no-startup-id ~/.config/polybar/shapes/launch.sh &
 #exec_always --no-startup-id ~/.config/polybar/shapes/scripts/pywal.sh 
 
@@ -338,12 +346,13 @@ exec --no-startup-id pamac-tray
 # exec --no-startup-id clipitd
 exec --no-startup-id $terminal --name "home" --hold ranger
 exec --no-startup-id firefox
-exec --no-startup-id all-in-one
+exec --no-startup-id thunderbird
+#exec --no-startup-id all-in-one
 exec --no-startup-id signal-desktop
 exec --no-startup-id discord
-exec --no-startup-id telegram-desktop
-exec --no-startup-id slack
-exec --no-startup-id skypeforlinux
+#exec --no-startup-id telegram-desktop
+#exec --no-startup-id slack
+#exec --no-startup-id skypeforlinux
 exec --no-startup-id /home/yannick/.screenlayout/default.sh
 #exec --no-startup-id variety
 #exec --no-startup-id discord
@@ -442,6 +451,7 @@ client.background       $bg-color
 # Set inner/outer gaps
 gaps inner 27
 gaps outer -2
+
 
 # Additionally, you can issue commands with the following syntax. This is useful to bind keys to changing the gap size.
 # gaps inner|outer current|all set|plus|minus <px>

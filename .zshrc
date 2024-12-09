@@ -136,14 +136,17 @@ alias la='ls -lAFh'   #long list,show almost all,show type,human readable
 alias lr='ls -tRFh'   #sorted by date,recursive,show type,human readable
 alias lt='ls -ltFh'   #long list,sorted by date,show type,human readable
 alias ll='ls -l'      #long list
+alias ld='lazydocker'
 alias ldot='ls -ld .*'
 alias lS='ls -1FSsh'
+alias vim='nvim'
 
 
-export EDITOR='vim'
+export VISUAL='nvim'
+export EDITOR='nvim'
 alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
 export XDG_CONFIG_HOME="$HOME/.config"
-export PATH=$HOME/opt:/usr/local/bin:$PATH
+export PATH=$HOME/.local/bin:$HOME/.pub-cache/bin:/usr/local/bin:$PATH
 
 ### Added by Zinit's installer
 if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
@@ -180,10 +183,10 @@ zinit $load sindresorhus/pure
 zstyle :prompt:pure:prompt:success color green
 
 zstyle ':completion:*' menu select
-zmodload zsh/complist
 
 zstyle ':completion:*' special-dirs true
 
+zmodload zsh/complist
 
 #zinit ice nocompile:! pick:c.zsh atpull:%atclone atclone:'dircolors -b LS_COLORS > c.zsh'
 #zinit $load trapd00r/LS_COLORS
@@ -214,6 +217,8 @@ zinit wait lucid for \
 zinit wait lucid for \
     OMZP::ssh-agent
 
+zinit pack"default+keys" for fzf
+
 bindkey "^?" backward-delete-char
 
 bindkey -M menuselect 'h' vi-backward-char
@@ -224,9 +229,16 @@ bindkey -M menuselect 'j' vi-down-line-or-history
 #=======
 #
 #
+if [ "$TMUX" = "" ]; then tmux; fi
 
 #alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
 
 #path+=~/.local/bin
 #term="st"
 #>>>>>>> 558b820 (Commit from tower)
+
+bindkey '^[f' fzf-cd-widget
+
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"

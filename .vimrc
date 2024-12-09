@@ -16,19 +16,29 @@ set number relativenumber
 set clipboard=unnamedplus
 nnoremap k gk
 nnoremap j gj
-try
-       "source ~/.vim_runtime/my_configs.vim
-catch
-endtry
+source ~/.vim_runtime/my_configs.vim
+
 let mapleader = ","
 let maplocalleader = ','
 " For vim-surround
 vmap Si S(i_<esc>f)
 au FileType mako vmap Si S"i${ _(<esc>2f"a) }<esc>
 
-if has('persistend_undo')
-   set undofile
-   set undodir=$HOME/.vim/undo
+let vimDir = '$HOME/.vim'
+
+if stridx(&runtimepath, expand(vimDir)) == -1
+  " vimDir is not on runtimepath, add it
+  let &runtimepath.=','.vimDir
+endif
+
+" Keep undo history across sessions by storing it in a file
+if has('persistent_undo')
+    let myUndoDir = expand(vimDir . '/undodir')
+    " Create dirs
+    call system('mkdir ' . vimDir)
+    call system('mkdir ' . myUndoDir)
+    let &undodir = myUndoDir
+    set undofile
 endif
 
 set directory^=$HOME/.vim/tmp//

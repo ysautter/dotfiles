@@ -22,7 +22,8 @@ nnoremap <expr> gp '`[' . strpart(getregtype(), 0, 1) . '`]'
 let g:languagetool_jar='$HOME/bin/LanguageTool-4.8/languagetool-commandline.jar'
 
 nnoremap <leader>sw :grep -r ./ -e "<C-R><C-W>"<CR>:cw<CR>
-nnoremap <leader>s :grep -r ./ -e 
+nnoremap <leader>s :%s/\<<C-r><C-w>\>/ 
+
 
 let g:instant_markdown_autostart = 0
 if has('persistent_undo')      "check if your vim version supports it

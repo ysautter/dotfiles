@@ -1,2 +1,3 @@
 source ~/.vimrc
+set scrolloff=0
 set clipboard+=ideaput
