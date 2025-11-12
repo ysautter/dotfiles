@@ -1,0 +1,142 @@
+{
+    "layer": "top",
+    "modules-left": [
+            "hyprland/workspaces"
+        ],
+    "modules-center": ["clock#1", "clock#2", "clock#3"],
+    "modules-right": ["custom/updates", "network", "custom/ip", "memory", "cpu", "battery", "pulseaudio", "disk#1", "disk#2", "disk#3"],
+
+    "hyprland/workspaces": {
+      "format": "{icon}",
+      "format-icons": {
+        "1": "",
+        "2": "",
+        "3": "",
+        "4": "",
+        "5": "",
+        "6": "",
+        "7": ""
+      }
+    },
+    "sway/mode": {
+        "format": "<span style=\"italic\">{}</span>"
+    },
+    "network": {
+        "format-wifi": "{essid} ({signalStrength}%) ",
+        "format-ethernet": "{ifname} ",
+        "format-disconnected": "", 
+        "max-length": 50,
+        "on-click": "kitty -e 'nmtui'"
+    },
+    "idle_inhibitor": {
+        "format": "{icon}",
+        "format-icons": {
+            "activated": "",
+            "deactivated": ""
+        },
+		"on-click": "bash /home/dg/.local/bin/toggleRemote"
+    },
+    "tray": {
+        "icon-size": 15,
+        "spacing": 10
+    },
+    "clock#1": {
+      "format": "{:%a}",
+      "tooltip": false
+    },
+    "clock#2": {
+		"on-click": "gnome-calendar"
+    },
+    "clock#3": {
+      "format": "{:%d.%m.%y}",
+      "tooltip": false
+    },
+    "battery": {
+        "states": {
+          "good": 95,
+          "warning": 30,
+          "critical": 15
+        },
+        "format": "{icon} {capacity}%",
+        "format-icons": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+    },
+    "network": {
+        "tooltip": false,
+        "format-wifi": "  {essid}",
+        "format-ethernet": ""
+    },
+    "pulseaudio": {
+        "format": "{icon}   {volume}%",
+        "format-bluetooth": "{volume}% {icon} {format_source}",
+        "format-bluetooth-muted": " {icon} {format_source}",
+        "format-muted": "0% {icon} ",
+        "format-source": "{volume}% ",
+        "format-source-muted": "",
+        "format-icons": {
+            "headphone": "",
+            "hands-free": "",
+            "headset": "",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": ["", "", ""]
+        },
+        "on-click": "pavucontrol"
+    },
+  "memory": {
+      "interval": 5,
+      "format": "  {avail} GB"
+  },
+  "cpu": {
+      "interval": 5,
+      "format": "CPU {usage:2}%"
+  },
+  "disk#1": {
+      "interval": 5,
+      "format": "/ {specific_free:0.2f} GB",
+      "unit": "GB",
+      "path": "/"
+  },
+  "disk#2": {
+      "interval": 5,
+      "format": "/storage {specific_free:0.2f} GB",
+      "unit": "GB",
+      "path": "/media/storage"
+  },
+  "disk#3": {
+      "interval": 5,
+      "format": "/data {specific_free:0.2f} GB",
+      "unit": "GB",
+      "path": "/media/data"
+  },
+  "custom/power": {
+      "format": " ",
+      "on-click": "swaynag -t warning -m 'Power Menu Options' -b 'Logout' 'swaymsg exit' -b 'Restart' 'shutdown -r now' -b 'Shutdown'  'shutdown -h now' --background=#005566 --button-background=#009999 --button-border=#002b33 --border-bottom=#002b33"
+  },
+  "custom/scratchpad-indicator": {
+      "format-text": "{}hi",
+      "return-type": "json",
+      "interval": 3,
+      "exec": "~/.local/bin/scratchpad-indicator 2> /dev/null",
+      "exec-if": "exit 0",
+      "on-click": "swaymsg 'scratchpad show'",
+      "on-click-right": "swaymsg 'move scratchpad'"
+  },
+  "custom/updates":{
+      "format": "  {}",
+      "exec": "checkupdates | wc -l",
+      "exec-if": "[[ $(checkupdates | wc -l) != 0 ]]",
+      "interval": 15
+  },
+  "custom/ip":{
+      "format": "IP {}",
+      "exec": "ip -4 addr show | awk '/inet / {if (++n == 2) {split($2, a, \"/\"); print a[1];}}'",
+      "interval": 15
+  }
+}
