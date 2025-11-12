@@ -67,8 +67,8 @@ bindsym Shift+XF86MonBrightnessUp exec --no-startup-id xbacklight -inc 1
 # bindsym $mod+F3 exec pcmanfm
 bindsym $mod+F3 exec ranger
 bindsym $mod+F5 exec $terminal mocp
-bindsym $mod+t exec --no-startup-id pkill compton
-bindsym $mod+Ctrl+t exec --no-startup-id compton -b --config ~/.config/compton.blur.conf --experimental-backends
+#bindsym $mod+t exec --no-startup-id pkill compton
+#bindsym $mod+Ctrl+t exec --no-startup-id compton -b --config ~/.config/compton.blur.conf --experimental-backends
 bindsym Print exec --no-startup-id i3-scrot
 #bindsym $mod+Print --release exec --no-startup-id i3-scrot -w
 #bindsym $mod+Print exec --no-startup-id flameshot gui
@@ -236,6 +236,7 @@ assign [class="All-in-One Messenger|all-in-one messenger"] $ws6
 assign [class="Thunderbird|thunderbird"] $ws6
 assign [class="Skype|skype"] $ws6
 assign [class="Signal|signal"] $ws6
+assign [class="Element"] $ws6
 assign [class="discord"] $ws6
 assign [class="telegram|Telegram"] $ws6
 assign [class="Slack|slack"] $ws6
@@ -332,7 +333,7 @@ bindsym $mod+9 exec --no-startup-id blurlock
 # Always start these apps
 exec_always --no-startup-id fix_xcursor
 #exec_always --no-startup-id xrandr --output DisplayPort-0 --mode 1920x1080 --rate 144 --primary --output HDMI-A-1 --auto --left-of DisplayPort-0
-exec_always --no-startup-id compton -b --config ~/.config/compton.blur.conf
+#exec_always --no-startup-id compton -b --config ~/.config/compton.blur.conf
 exec_always --no-startup-id clipmenud
 exec_always --no-startup-id xmousepasteblock
 exec_always --no-startup-id ~/.config/polybar/shapes/launch.sh &
@@ -349,6 +350,7 @@ exec --no-startup-id firefox
 exec --no-startup-id thunderbird
 #exec --no-startup-id all-in-one
 exec --no-startup-id signal-desktop
+exec --no-startup-id element-desktop
 exec --no-startup-id discord
 #exec --no-startup-id telegram-desktop
 #exec --no-startup-id slack
