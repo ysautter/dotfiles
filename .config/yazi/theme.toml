@@ -1,0 +1,17 @@
+[flavor]
+dark = "kanagawa-dragon"
+
+[tabs]
+active   = { fg = "#16161d", bg = "#7fb4ca", bold = true }
+inactive = { fg = "#7fb4ca", bg = "#16161d" }
+
+# Separator
+sep_inner = { open = "", close = "" }
+sep_outer = { open = "", close = "" }
+#
+
+# : }}}
+#
+[status]
+sep_left  = { open = "", close = "" }
+sep_right = { open = "", close = "" }
