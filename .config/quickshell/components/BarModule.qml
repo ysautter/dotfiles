@@ -16,6 +16,8 @@ Item {
     property real level: -1                // < 0 = no usage bar
     property color levelColor: textColor
     property color background: "transparent"
+    property int maxTextWidth: 0           // > 0: elide longer text
+    property alias iconItem: iconText
 
     signal clicked(int button)
     signal scrolled(int delta)
@@ -49,6 +51,7 @@ Item {
         Behavior on opacity { NumberAnimation { duration: Theme.animMed } }
 
         Text {
+            id: iconText
             visible: root.icon !== ""
             anchors.verticalCenter: parent.verticalCenter
             text: root.icon
@@ -62,6 +65,8 @@ Item {
             visible: root.text !== ""
             anchors.verticalCenter: parent.verticalCenter
             text: root.text
+            width: root.maxTextWidth > 0 ? Math.min(implicitWidth, root.maxTextWidth) : implicitWidth
+            elide: Text.ElideRight
             color: root.textColor
             font.family: Theme.font
             font.pixelSize: Theme.fontSize

@@ -47,16 +47,25 @@ PanelWindow {
             opacity: 0
             Intro { target: left; delay: 0 }
 
-            Workspaces { screen: bar.screen }
+            Workspaces { id: workspaces; screen: bar.screen }
+            Submap { id: submap }
+            WindowTitle {
+                screen: bar.screen
+                // use whatever room is left before the centre block
+                maxTextWidth: Math.max(0, Math.min(420, centre.x - left.x - 12
+                    - workspaces.implicitWidth - submap.implicitWidth - Theme.padding * 2))
+            }
         }
 
         Block {
             id: centre
-            x: Math.round((parent.width - width) / 2)
+            // centred, but pushed left if the right block would overlap it
+            x: Math.min(Math.round((parent.width - width) / 2), right.x - width - 12)
             y: Theme.gapTop
             opacity: 0
             Intro { target: centre; delay: 80 }
 
+            MediaModule {}
             Clocks {}
         }
 
@@ -67,13 +76,16 @@ PanelWindow {
             opacity: 0
             Intro { target: right; delay: 160 }
 
+            PrivacyModule {}
             Claude {}
             Updates {}
             Network {}
             SystemStats {}
+            BluetoothModule {}
             Battery {}
             Volume {}
             Disks {}
+            Tray {}
         }
     }
 }
