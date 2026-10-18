@@ -17,7 +17,7 @@ Column {
 
     PwObjectTracker { objects: [...root.sinks, ...root.sources, ...root.streams] }
 
-    function label(n) { return n.description || n.nickname || n.name; }
+    function label(n) { return n ? (n.description || n.nickname || n.name) : ""; }
 
     component VolumeRow: Item {
         id: vr

@@ -110,6 +110,7 @@ PanelWindow {
             Battery { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Volume { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Disks {}
+            NotifModule {}
             Tray {}
         }
     }
