@@ -1,11 +1,15 @@
 import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import qs.config
 import qs.components
 import qs.modules
+import qs.panels
 
-// Top bar: workspaces (left) | clocks (centre) | status modules (right).
+// Top bar: workspaces (left) | media + clocks (centre) | status modules (right).
+// Clicking a module opens its panel; clicking elsewhere closes it.
 PanelWindow {
     id: bar
 
@@ -22,6 +26,27 @@ PanelWindow {
 
     WlrLayershell.namespace: "quickshell-bar"
     WlrLayershell.layer: WlrLayer.Top
+    // panels with text input (Wi-Fi password) need keyboard focus
+    WlrLayershell.keyboardFocus: panel !== "" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    // ---- panel management ---------------------------------------------------------
+    property string panel: ""
+    property Item panelAnchor: null
+
+    function togglePanel(name, anchor) {
+        if (panel === name) {
+            panel = "";
+        } else {
+            panelAnchor = anchor;
+            panel = name;
+        }
+    }
+
+    HyprlandFocusGrab {
+        windows: [bar, ...panels.children.filter(p => p.visible)]
+        active: bar.panel !== ""
+        onCleared: bar.panel = ""
+    }
 
     Item {
         id: content
@@ -65,8 +90,8 @@ PanelWindow {
             opacity: 0
             Intro { target: centre; delay: 80 }
 
-            MediaModule {}
-            Clocks {}
+            MediaModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            Clocks { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
         }
 
         Block {
@@ -77,15 +102,37 @@ PanelWindow {
             Intro { target: right; delay: 160 }
 
             PrivacyModule {}
-            Claude {}
-            Updates {}
-            Network {}
-            SystemStats {}
-            BluetoothModule {}
-            Battery {}
-            Volume {}
+            Claude { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            Updates { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            Network { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            SystemStats { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            BluetoothModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            Battery { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            Volume { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Disks {}
             Tray {}
         }
+    }
+
+    // ---- panels ---------------------------------------------------------------------------
+    Item {
+        id: panels
+
+        BarPanel { bar: bar; name: "media";     panelWidth: 380; MediaPanel { active: bar.panel === "media" } }
+        BarPanel { bar: bar; name: "calendar";  panelWidth: 320; CalendarPanel { active: bar.panel === "calendar" } }
+        BarPanel { bar: bar; name: "claude";    panelWidth: 320; ClaudePanel {} }
+        BarPanel { bar: bar; name: "updates";   panelWidth: 420; UpdatesPanel {} }
+        BarPanel { bar: bar; name: "network";   panelWidth: 380; NetworkPanel { active: bar.panel === "network" } }
+        BarPanel { bar: bar; name: "system";    panelWidth: 360; SystemPanel { active: bar.panel === "system" } }
+        BarPanel { bar: bar; name: "bluetooth"; panelWidth: 360; BluetoothPanel { active: bar.panel === "bluetooth" } }
+        BarPanel { bar: bar; name: "battery";   panelWidth: 320; BatteryPanel {} }
+        BarPanel { bar: bar; name: "audio";     panelWidth: 400; AudioPanel {} }
+    }
+
+    // `qs ipc call bar panel <name>` (e.g. for keybinds)
+    IpcHandler {
+        target: "bar-" + bar.screen.name
+        function panel(name: string): void { bar.togglePanel(name, bar.panelAnchor ?? right); }
+        function close(): void { bar.panel = ""; }
     }
 }

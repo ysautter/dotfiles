@@ -8,12 +8,13 @@ import qs.components
 Row {
     id: root
 
+    signal panelRequested(string name, Item anchor)
+
     height: Theme.barHeight
 
     SystemClock {
         id: clock
         precision: SystemClock.Minutes
-        onDateChanged: calProc.running = true
     }
 
     BarModule {
@@ -21,25 +22,17 @@ Row {
     }
 
     BarModule {
+        id: time
         text: Qt.formatDateTime(clock.date, "HH:mm")
-        tooltip: calProc.calendar
         clickable: true
-        onClicked: Quickshell.execDetached(["sh", "-c", "command -v gnome-calendar >/dev/null && exec gnome-calendar"])
+        onClicked: root.panelRequested("calendar", time)
     }
 
     BarModule {
+        id: day
         text: Qt.formatDateTime(clock.date, "dd.MM.yy")
-        tooltip: calProc.calendar
+        clickable: true
+        onClicked: root.panelRequested("calendar", time)
     }
 
-    // month calendar for the tooltip
-    Process {
-        id: calProc
-        property string calendar: ""
-        command: ["cal", "-m"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: calProc.calendar = text.replace(/\s+$/, "")
-        }
-    }
 }

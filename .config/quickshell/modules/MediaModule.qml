@@ -8,7 +8,7 @@ import qs.services
 BarModule {
     id: root
 
-    signal openPanel()
+    signal panelRequested(string name, Item anchor)
 
     icon: Media.playing ? "\uf04b" : "\uf04c"   // play / pause
     text: Media.artist ? `${Media.title} — ${Media.artist}` : Media.title
@@ -18,7 +18,7 @@ BarModule {
     textColor: Media.playing ? Colors.fg : Qt.alpha(Colors.fg, 0.6)
 
     onClicked: button => {
-        if (button === Qt.LeftButton) root.openPanel();
+        if (button === Qt.LeftButton) root.panelRequested("media", root);
         else if (button === Qt.MiddleButton) Media.togglePlaying();
         else if (button === Qt.RightButton) Media.next();
     }

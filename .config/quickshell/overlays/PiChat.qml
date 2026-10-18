@@ -324,7 +324,8 @@ PanelWindow {
             anchors.right: parent.right
             anchors.leftMargin: 14
             anchors.rightMargin: 14
-            height: text !== "" ? implicitHeight + 6 : 0
+            height: text !== "" ? 20 : 0
+            verticalAlignment: Text.AlignVCenter
             text: Pi.notice
             elide: Text.ElideRight
             color: Qt.alpha(Colors.warning, 0.8)

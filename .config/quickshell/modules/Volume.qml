@@ -5,9 +5,11 @@ import qs.config
 import qs.components
 
 // Default output volume via PipeWire.
-// Left click: pavucontrol, right click: mute, scroll: ±5 %.
+// Left click: audio panel, right click: mute, middle: pavucontrol, scroll: ±5 %.
 BarModule {
     id: root
+
+    signal panelRequested(string name, Item anchor)
 
     readonly property PwNode sink: Pipewire.defaultAudioSink
     readonly property bool muted: sink?.audio?.muted ?? false
@@ -26,8 +28,10 @@ BarModule {
     onClicked: button => {
         if (button === Qt.RightButton && sink?.audio)
             sink.audio.muted = !sink.audio.muted;
-        else if (button === Qt.LeftButton)
+        else if (button === Qt.MiddleButton)
             Quickshell.execDetached(["pavucontrol"]);
+        else
+            root.panelRequested("audio", root);
     }
     onScrolled: delta => {
         if (!sink?.audio) return;

@@ -8,13 +8,14 @@ import qs.components
 BarModule {
     id: root
 
-    signal openPanel()
+    signal panelRequested(string name, Item anchor)
 
     readonly property BluetoothAdapter adapter: Bluetooth.defaultAdapter
     readonly property var connected: Bluetooth.devices.values.filter(d => d.connected)
     readonly property var first: connected[0] ?? null
 
-    shown: adapter !== null && adapter.enabled && connected.length > 0
+    shown: adapter !== null
+    textColor: adapter?.enabled ? Colors.fg : Qt.alpha(Colors.fg, 0.4)
     icon: "\uf293"
     text: {
         if (!first) return "";
@@ -25,6 +26,6 @@ BarModule {
     }
     maxTextWidth: 180
     clickable: true
-    tooltip: connected.map(d => d.name + (d.batteryAvailable ? ` (${Math.round(d.battery * 100)}%)` : "")).join("\n")
-    onClicked: openPanel()
+    tooltip: connected.length === 0 ? (adapter?.enabled ? "Bluetooth on" : "Bluetooth off") : connected.map(d => d.name + (d.batteryAvailable ? ` (${Math.round(d.battery * 100)}%)` : "")).join("\n")
+    onClicked: panelRequested("bluetooth", root)
 }

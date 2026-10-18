@@ -8,6 +8,10 @@ import qs.components
 BarModule {
     id: root
 
+    signal panelRequested(string name, Item anchor)
+    clickable: true
+    onClicked: panelRequested("battery", root)
+
     readonly property var dev: UPower.displayDevice
     readonly property int pct: Math.round((dev?.percentage ?? 0) * 100)
     readonly property bool charging: dev?.state === UPowerDeviceState.Charging
