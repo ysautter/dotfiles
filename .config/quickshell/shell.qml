@@ -12,4 +12,5 @@ ShellRoot {
 
     // overlays that follow the focused monitor
     OsdWindow {}
+    PiChat {}
 }
