@@ -53,7 +53,9 @@ PanelWindow {
     }
 
     HyprlandFocusGrab {
-        windows: [bar, ...panels.children.filter(p => p.visible)]
+        // the panels are popup windows (not Items), so list them explicitly;
+        // clicks inside windows that are not part of the grab are blocked
+        windows: [bar, ...[panel_media, panel_calendar, panel_claude, panel_updates, panel_network, panel_system, panel_bluetooth, panel_battery, panel_audio].filter(p => p.visible)]
         active: bar.panel !== ""
         onCleared: bar.panel = ""
     }
@@ -134,15 +136,15 @@ PanelWindow {
     Item {
         id: panels
 
-        BarPanel { bar: bar; name: "media";     panelWidth: 380; MediaPanel { active: bar.panel === "media" } }
-        BarPanel { bar: bar; name: "calendar";  panelWidth: 320; CalendarPanel { active: bar.panel === "calendar" } }
-        BarPanel { bar: bar; name: "claude";    panelWidth: 320; ClaudePanel {} }
-        BarPanel { bar: bar; name: "updates";   panelWidth: 420; UpdatesPanel {} }
-        BarPanel { bar: bar; name: "network";   panelWidth: 380; NetworkPanel { active: bar.panel === "network" } }
-        BarPanel { bar: bar; name: "system";    panelWidth: 360; SystemPanel { active: bar.panel === "system" } }
-        BarPanel { bar: bar; name: "bluetooth"; panelWidth: 360; BluetoothPanel { active: bar.panel === "bluetooth" } }
-        BarPanel { bar: bar; name: "battery";   panelWidth: 320; BatteryPanel {} }
-        BarPanel { bar: bar; name: "audio";     panelWidth: 400; AudioPanel {} }
+        BarPanel { id: panel_media; bar: bar; name: "media";     panelWidth: 380; MediaPanel { active: bar.panel === "media" } }
+        BarPanel { id: panel_calendar; bar: bar; name: "calendar";  panelWidth: 320; CalendarPanel { active: bar.panel === "calendar" } }
+        BarPanel { id: panel_claude; bar: bar; name: "claude";    panelWidth: 320; ClaudePanel {} }
+        BarPanel { id: panel_updates; bar: bar; name: "updates";   panelWidth: 420; UpdatesPanel {} }
+        BarPanel { id: panel_network; bar: bar; name: "network";   panelWidth: 380; NetworkPanel { active: bar.panel === "network" } }
+        BarPanel { id: panel_system; bar: bar; name: "system";    panelWidth: 360; SystemPanel { active: bar.panel === "system" } }
+        BarPanel { id: panel_bluetooth; bar: bar; name: "bluetooth"; panelWidth: 360; BluetoothPanel { active: bar.panel === "bluetooth" } }
+        BarPanel { id: panel_battery; bar: bar; name: "battery";   panelWidth: 320; BatteryPanel {} }
+        BarPanel { id: panel_audio; bar: bar; name: "audio";     panelWidth: 400; AudioPanel {} }
     }
 
     // `qs ipc call bar panel <name>` (e.g. for keybinds)
