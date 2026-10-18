@@ -1,0 +1,21 @@
+# wallust config — https://explosion-mental.codeberg.page/wallust/
+
+# How the image is parsed to extract colors.
+backend = "fastresize"
+
+# Color space used to select the most prominent colors.
+color_space = "salience"
+
+# Scheme palette. saliencedark keeps a dark, readable background with vivid accents.
+palette = "saliencedark"
+
+# Ensure readable contrast against the background (helps busy photos).
+check_contrast = true
+
+# Bump saturation a little so waybar accents stay punchy.
+saturation = 40
+
+[templates]
+# template: RELATIVE to ~/.config/wallust/templates
+# target:   ABSOLUTE path where the rendered file is written (~ expands to $HOME)
+waybar = { template = 'colors.css', target = '~/.config/waybar/colors.css' }

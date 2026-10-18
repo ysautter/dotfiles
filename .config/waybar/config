@@ -4,7 +4,7 @@
             "hyprland/workspaces"
         ],
     "modules-center": ["clock#1", "clock#2", "clock#3"],
-    "modules-right": ["custom/updates", "network", "custom/ip", "memory", "cpu", "battery", "pulseaudio", "disk#1", "disk#2", "disk#3"],
+    "modules-right": ["custom/claude", "custom/updates", "network", "custom/ip", "memory", "cpu", "battery", "pulseaudio", "disk#1", "disk#2", "disk#3"],
 
     "hyprland/workspaces": {
       "format": "{icon}",
@@ -133,6 +133,13 @@
       "exec": "checkupdates | wc -l",
       "exec-if": "[[ $(checkupdates | wc -l) != 0 ]]",
       "interval": 15
+  },
+  "custom/claude": {
+      "exec": "~/.config/waybar/scripts/claude-usage.sh",
+      "return-type": "json",
+      "interval": 120,
+      "on-click": "pkill -RTMIN+8 waybar",
+      "signal": 8
   },
   "custom/ip":{
       "format": "IP {}",
