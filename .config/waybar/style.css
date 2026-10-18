@@ -61,6 +61,7 @@ window#waybar {
 #custom-menu,
 #custom-ip,
 #custom-updates,
+#custom-claude,
 #idle_inhibitor {
     padding: 0 10px;
 }
@@ -96,6 +97,13 @@ window#waybar {
     color: #cc3436;
 }
 #temperature.critical {
+    color: #cc3436;
+}
+#custom-claude.warning {
+	color: #e6e600;
+}
+#custom-claude.critical,
+#custom-claude.error {
     color: #cc3436;
 }
 /*-----Colors----*/
