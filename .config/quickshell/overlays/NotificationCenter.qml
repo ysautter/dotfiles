@@ -11,7 +11,13 @@ PanelWindow {
     id: win
 
     screen: HyprState.focusedScreen
-    visible: Notifs.centerOpen || slide.running
+    // stay mapped until the slide-out animation is done
+    visible: Notifs.centerOpen || hideDelay.running
+    Timer { id: hideDelay; interval: Theme.animSlow + 50 }
+    Connections {
+        target: Notifs
+        function onCenterOpenChanged() { if (!Notifs.centerOpen) hideDelay.restart(); }
+    }
 
     anchors.top: true
     anchors.right: true
@@ -38,7 +44,7 @@ PanelWindow {
         width: parent.width
         height: parent.height
         x: Notifs.centerOpen ? 0 : 440
-        Behavior on x { NumberAnimation { id: slide; duration: Theme.animSlow; easing.type: Easing.OutCubic } }
+        Behavior on x { NumberAnimation { duration: Theme.animSlow; easing.type: Easing.OutCubic } }
         color: Qt.alpha(Colors.background, 0.96)
         border.width: 1
         border.color: Qt.alpha(Colors.fg, 0.3)

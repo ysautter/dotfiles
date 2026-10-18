@@ -27,7 +27,7 @@ Singleton {
 
     function dismiss(n) {
         removePopup(n);
-        n.dismiss();
+        if (n && n.tracked) n.dismiss();     // may already be closed by an action
     }
 
     function clearAll() {
