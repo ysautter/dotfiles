@@ -7,6 +7,7 @@ import qs.config
 import qs.components
 import qs.modules
 import qs.panels
+import qs.services
 
 // Top bar: workspaces (left) | media + clocks (centre) | status modules (right).
 // Clicking a module opens its panel; clicking elsewhere closes it.
@@ -40,6 +41,12 @@ PanelWindow {
             panelAnchor = anchor;
             panel = name;
         }
+    }
+
+    // presentation mode: keep the screen awake
+    IdleInhibitor {
+        window: bar
+        enabled: Presentation.active
     }
 
     HyprlandFocusGrab {
@@ -101,9 +108,10 @@ PanelWindow {
             opacity: 0
             Intro { target: right; delay: 160 }
 
+            PresentationModule {}
             PrivacyModule {}
             Claude { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            Updates { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            UpdatesModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Network { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             SystemStats { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             BluetoothModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }

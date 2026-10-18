@@ -2,8 +2,12 @@
 import Quickshell
 import QtQuick
 import qs.overlays
+import qs.services
 
 ShellRoot {
+    // services that must run from startup (singletons are created lazily)
+    readonly property var _services: [Clip, Notifs, Presentation]
+
     // one bar per monitor
     Variants {
         model: Quickshell.screens
@@ -15,4 +19,8 @@ ShellRoot {
     PiChat {}
     NotificationPopups {}
     NotificationCenter {}
+    Launcher {}
+    PowerMenu {}
+    WallpaperPicker {}
+    MonitorMenu {}
 }

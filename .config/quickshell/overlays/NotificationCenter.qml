@@ -11,7 +11,7 @@ PanelWindow {
     id: win
 
     screen: HyprState.focusedScreen
-    visible: Notifs.centerOpen || frame.x < frame.width
+    visible: Notifs.centerOpen || slide.running
 
     anchors.top: true
     anchors.right: true
@@ -38,7 +38,7 @@ PanelWindow {
         width: parent.width
         height: parent.height
         x: Notifs.centerOpen ? 0 : width + 20
-        Behavior on x { NumberAnimation { duration: Theme.animSlow; easing.type: Easing.OutCubic } }
+        Behavior on x { NumberAnimation { id: slide; duration: Theme.animSlow; easing.type: Easing.OutCubic } }
         color: Qt.alpha(Colors.background, 0.96)
         border.width: 1
         border.color: Qt.alpha(Colors.fg, 0.3)

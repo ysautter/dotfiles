@@ -126,8 +126,10 @@ Rectangle {
                         visible: modelData.identifier !== "default" || (root.notification?.actions.length ?? 0) === 1
                         text: modelData.text || modelData.identifier
                         onClicked: {
+                            // invoking can destroy the notification (and this card)
+                            const n = root.notification;
                             modelData.invoke();
-                            Notifs.dismiss(root.notification);
+                            if (n?.tracked) Notifs.dismiss(n);
                         }
                     }
                 }
