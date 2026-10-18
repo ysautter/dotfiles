@@ -42,15 +42,15 @@ AWK_SCRIPT
   fi
 }
 
-# --- Function to initiate swww and set the wallpaper with animation ---
-set_wallpaper_with_swww() {
+# --- Function to initiate awww and set the wallpaper with animation ---
+set_wallpaper_with_awww() {
   local wallpaper_path="$1"
   local monitor_name="$2" # Set your monitor name here, e.g., "eDP-1", "DP-1"
 
-  # Start swww daemon if it's not running
-  if ! pgrep -x "swww-daemon" >/dev/null; then
-    echo "Starting swww-daemon..."
-    swww-daemon &
+  # Start awww daemon if it's not running
+  if ! pgrep -x "awww-daemon" >/dev/null; then
+    echo "Starting awww-daemon..."
+    awww-daemon &
     sleep 0.5 # Give it a moment to initialize
   fi
 
@@ -64,13 +64,13 @@ set_wallpaper_with_swww() {
   # --aspect-ratio: adjust aspect ratio (useful for some transitions)
 
   # Some common and nice-looking transitions:
-  # swww img "$wallpaper_path" -o "$monitor_name" --transition-type wipe --transition-duration 0.8 --transition-fps 60 --transition-step 90
-  # swww img "$wallpaper_path" -o "$monitor_name" --transition-type grow --transition-duration 1 --transition-fps 60
-  # swww img "$wallpaper_path" -o "$monitor_name" --transition-type outer --transition-duration 1 --transition-fps 60
-  swww img "$wallpaper_path" -o "$monitor_name" --transition-type grow --transition-step 90 --transition-duration 1 --transition-fps 165
+  # awww img "$wallpaper_path" -o "$monitor_name" --transition-type wipe --transition-duration 0.8 --transition-fps 60 --transition-step 90
+  # awww img "$wallpaper_path" -o "$monitor_name" --transition-type grow --transition-duration 1 --transition-fps 60
+  # awww img "$wallpaper_path" -o "$monitor_name" --transition-type outer --transition-duration 1 --transition-fps 60
+  awww img "$wallpaper_path" -o "$monitor_name" --transition-type grow --transition-step 90 --transition-duration 1 --transition-fps 165
 
   # If you want to apply to all monitors without specifying each:
-  # swww img "$wallpaper_path" --transition-type grow --transition-duration 1 --transition-fps 60
+  # awww img "$wallpaper_path" --transition-type grow --transition-duration 1 --transition-fps 60
 
   echo "Wallpaper set with animation."
 }
@@ -78,13 +78,54 @@ set_wallpaper_with_swww() {
 # --- Main script logic ---
 
 NEW_WALLPAPER=""
-MONITOR="DP-1"
+MONITOR="eDP-1"
 
-if [ -z "$1" ]; then
+# Usage:
+#   change-wp                -> random wallpaper
+#   change-wp next|prev      -> cycle through wallpapers in sorted order
+#   change-wp /path/img.jpg  -> set a specific wallpaper
+# An optional monitor name can be given as the last argument in every mode.
+
+if [ "$1" = "next" ] || [ "$1" = "--next" ] || [ "$1" = "prev" ] || [ "$1" = "--prev" ]; then
+  # Cycle through the wallpapers in sorted (alphabetical) order.
+  if [ ! -d "$WALLPAPER_DIR" ]; then
+    echo "Error: Wallpaper directory $WALLPAPER_DIR does not exist."
+    exit 1
+  fi
+  mapfile -t WALLPAPERS < <(find -L "$WALLPAPER_DIR" -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.gif" -o -iname "*.bmp" \) | sort)
+  count=${#WALLPAPERS[@]}
+  if [ "$count" -eq 0 ]; then
+    echo "Error: No suitable image files found in $WALLPAPER_DIR."
+    exit 1
+  fi
+
+  # Figure out which wallpaper is currently displayed (as reported by awww).
+  # Match on realpath too: some entries are symlinks and awww reports the
+  # resolved target, which otherwise wouldn't match the symlink path here.
+  CURRENT=$(awww query 2>/dev/null | sed -n 's/.*image: //p' | head -1)
+  CURRENT_REAL=$(realpath -- "$CURRENT" 2>/dev/null)
+  idx=-1
+  for i in "${!WALLPAPERS[@]}"; do
+    entry_real=$(realpath -- "${WALLPAPERS[$i]}" 2>/dev/null)
+    if [ "${WALLPAPERS[$i]}" = "$CURRENT" ] || \
+       { [ -n "$CURRENT_REAL" ] && [ "$entry_real" = "$CURRENT_REAL" ]; }; then
+      idx=$i; break;
+    fi
+  done
+
+  case "$1" in
+    next|--next)
+      if [ "$idx" -eq -1 ]; then idx=0; else idx=$(( (idx + 1) % count )); fi ;;
+    prev|--prev)
+      if [ "$idx" -eq -1 ]; then idx=$((count - 1)); else idx=$(( (idx - 1 + count) % count )); fi ;;
+  esac
+  NEW_WALLPAPER="${WALLPAPERS[$idx]}"
+  echo "Cycling ($1) to wallpaper $((idx + 1))/$count: $NEW_WALLPAPER"
+elif [ -z "$1" ]; then
   # No path given, choose randomly
   echo "No wallpaper path provided. Choosing randomly from $WALLPAPER_DIR..."
   if [ -d "$WALLPAPER_DIR" ]; then
-    NEW_WALLPAPER=$(find "$WALLPAPER_DIR" -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.gif" -o -iname "*.bmp" \) | shuf -n 1)
+    NEW_WALLPAPER=$(find -L "$WALLPAPER_DIR" -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.gif" -o -iname "*.bmp" \) | shuf -n 1)
     if [ -z "$NEW_WALLPAPER" ]; then
       echo "Error: No suitable image files found in $WALLPAPER_DIR."
       exit 1
@@ -118,18 +159,52 @@ fi
 
 echo "Selected wallpaper: $NEW_WALLPAPER"
 
-# 1. Set wallpaper with swww (which handles transitions)
-set_wallpaper_with_swww "$NEW_WALLPAPER" "$MONITOR"
+# 1. Set wallpaper with awww (which handles transitions)
+set_wallpaper_with_awww "$NEW_WALLPAPER" "$MONITOR"
 
 # 2. Update hyprlock.conf
 update_hyprlock_conf "$NEW_WALLPAPER"
 
-# 3. Regenerate colors using pywal
-#echo "Generating colors with pywal..."
-#wal -i "$NEW_WALLPAPER" -n # -n prevents pywal from changing the wallpaper itself
+# 3. Regenerate colors from the wallpaper with wallust.
+#    This renders ~/.config/waybar/colors.css from the template.
+echo "Generating colors with wallust..."
+# --skip-sequences: don't emit terminal escape sequences. They can block on a
+# non-draining TTY and hang the whole script; waybar theming uses templates, not
+# sequences, so this loses nothing here.
+wallust run --skip-sequences "$NEW_WALLPAPER"
 
-# 4. Restart waybar to apply new colors
-#pkill waybar && waybar
+# 3b. Pick the most VIVID characteristic color of the wallpaper (the one that
+#     "pops"), not the most frequent one, and expose it to waybar as @dominant
+#     (main text/accent color). Quantize to 24 clusters, score each by
+#     saturation*brightness so greys and near-black lose, take the highest.
+DOMINANT=$(magick "$NEW_WALLPAPER" -resize 400x400\> +dither -colors 24 -depth 8 \
+  -format "%c\n" histogram:info: 2>/dev/null \
+  | sed -E 's/^ *([0-9]+):\ \(([0-9]+),([0-9]+),([0-9]+)\).*#([0-9A-Fa-f]{6}).*/\1 \2 \3 \4 #\5/' \
+  | awk 'BEGIN{best=-1}
+      { if($5 !~ /^#[0-9A-Fa-f]{6}$/) next;   # skip blank/garbage lines
+        cnt=$1+0; r=$2+0; g=$3+0; b=$4+0;
+        mx=r; if(g>mx)mx=g; if(b>mx)mx=b;
+        mn=r; if(g<mn)mn=g; if(b<mn)mn=b;
+        if(mx==0) next;                       # skip pure black (avoids div-by-zero)
+        total+=cnt; hex[NR]=$5; c[NR]=cnt; sat[NR]=(mx-mn)/mx; val[NR]=mx/255 }
+      END{
+        for(i in hex){
+          if(c[i] < total*0.005) continue;    # ignore tiny specks
+          score=sat[i]*val[i];
+          if(score>best){best=score; win=hex[i]} }
+        print win }')
+if [ -n "$DOMINANT" ]; then
+  echo "Dominant (most vivid) color: $DOMINANT"
+  printf '/* most vivid characteristic color of the wallpaper, written by change-wp */\n@define-color dominant %s;\n' \
+    "$DOMINANT" >"$HOME/.config/waybar/dominant.css"
+else
+  echo "WARNING: could not determine dominant color; keeping previous value."
+fi
 
-#echo "Wallpaper and colors updated successfully!"
+# 4. Live-reload waybar so it picks up the new colors (SIGUSR2 = reload, no flicker).
+if pgrep -x waybar >/dev/null; then
+  killall -SIGUSR2 waybar
+fi
+
+echo "Wallpaper and colors updated successfully!"
 echo "Note: Hyprlock will use the new background the next time it is invoked."
