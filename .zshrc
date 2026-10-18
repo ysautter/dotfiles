@@ -117,7 +117,6 @@
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
-#<<<<<<< HEAD
 
 HISTFILE=~/.zsh_history
 HISTSIZE=1000000
@@ -184,10 +183,20 @@ load=light
 zinit $load willghatch/zsh-saneopt
 
 zinit $load mafredri/zsh-async
-zinit $load rupa/z
+#zinit $load rupa/z
+zinit ice wait"2" as"command" from"gh-r" lucid \
+  mv"zoxide*/zoxide -> zoxide" \
+  atclone"./zoxide init zsh > init.zsh" \
+  atpull"%atclone" src"init.zsh" nocompile'!'
+zinit light ajeetdsouza/zoxide
 
 zinit ice pick"async.zsh" src"pure.zsh" atload""
 zinit $load sindresorhus/pure
+
+#zinit pack"default+keys" for fzf
+
+source <(fzf --zsh)
+# bindkey '^[f' fzf-cd-widget
 
 zstyle :prompt:pure:prompt:success color green
 
@@ -210,6 +219,8 @@ zinit ice silent wait:1; zinit $load mollifier/cd-gitroot
 zinit ice silent wait:1; zinit $load micha/resty
 zinit ice silent wait:1; zinit $load supercrabtree/k
 
+eval "$(zoxide init zsh)"
+
 zinit ice silent wait!1 atload"ZINIT[COMPINIT_OPTS]=-C; zpcompinit"
 
 zinit wait lucid for \
@@ -217,16 +228,15 @@ zinit wait lucid for \
       zdharma/fast-syntax-highlighting \
       OMZP::colored-man-pages \
 
-zinit wait lucid for \
-  as"completion" \
-    OMZP::docker/_docker \
-    OMZP::docker-compose/_docker-compose
+#zinit wait lucid for \
+#  as"completion" \
+#    OMZP::docker/_docker \
+#    OMZP::docker-compose/_docker-compose
 
 
 zinit wait lucid for \
     OMZP::ssh-agent
 
-zinit pack"default+keys" for fzf
 
 bindkey "^?" backward-delete-char
 
@@ -235,20 +245,16 @@ bindkey -M menuselect 'k' vi-up-line-or-history
 bindkey -M menuselect 'l' vi-forward-char
 bindkey -M menuselect 'j' vi-down-line-or-history
 
-#=======
-#
-#
 if [ "$TMUX" = "" ]; then tmux; fi
 
 #alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
 
 #path+=~/.local/bin
 #term="st"
-#>>>>>>> 558b820 (Commit from tower)
 
-bindkey '^[f' fzf-cd-widget
 
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
+
 
