@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+#
+# Point ~/.config/hypr/monitors.conf (a symlink, not tracked in git) at one of
+# the tracked layout files. "default" uses the per-host layout
+# monitors-<short-hostname>.conf, falling back to monitors_default.conf.
+
+if [ "$#" -ne 1 ]; then
+  msg="Usage: $0 {default|beamer|only-beamer}"
+  echo "$msg"
+  notify-send "Monitor" "$msg"
+  exit 1
+fi
+
+config_folder="$HOME/.config/hypr"
+monitor_conf="${config_folder}/monitors.conf"
+host="$(uname -n)"
+host="${host%%.*}"
+
+case $1 in
+  default)
+    target="monitors-${host}.conf"
+    [ -f "${config_folder}/${target}" ] || target="monitors_default.conf"
+    ;;
+  beamer)
+    target="monitors_with_beamer.conf"
+    ;;
+  only-beamer)
+    target="monitors_only_beamer.conf"
+    ;;
+  *)
+    msg="Invalid option. Use one of: default, beamer, only-beamer."
+    echo "$msg"
+    notify-send "Monitor" "$msg"
+    exit 1
+    ;;
+esac
+
+# Relative symlink; never cp onto monitors.conf (that would overwrite the
+# tracked file it currently points to).
+ln -sfn "$target" "$monitor_conf"
+# Swapping a symlink may not trigger Hyprland's file watcher, so reload explicitly.
+hyprctl reload >/dev/null
+
+msg="Switched monitor setup to: $1 ($target)"
+echo "$msg"
+notify-send "Monitor" "$msg"
