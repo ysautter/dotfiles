@@ -5,8 +5,10 @@ notifications, launcher, lock screen, OSD, overview, screenshot tool and a
 quick-question chat with the pi agent. Colours follow the wallpaper
 (wallust → `~/.config/waybar/colors.css` + `dominant.css`, watched live).
 
-Started by `exec-once = qs -d` in `hypr/hyprland.conf`; it reloads itself on
-every file change. Logs: `qs log -f`. All features: `qs ipc show`.
+Started by `exec-once = qs -n -d` in `hypr/hyprland.conf` (`-n`: never a second
+instance; with two running, `qs ipc call` blocks). It reloads itself on every
+file change. Restart: `pkill -x qs; qs -n -d`. Logs: `qs log -f`. All
+features: `qs ipc show`.
 
 ## Keybinds (`~/.config/hypr/quickshell.conf`)
 
@@ -67,7 +69,7 @@ config checkout qs-4-panels -- .config/quickshell .config/hypr/quickshell.conf
 # back to waybar/dunst/rofi completely
 config checkout pre-quickshell -- .config/hypr/hyprland.conf
 systemctl --user unmask dunst
-qs kill; hyprctl reload; ~/.local/bin/launch-waybar &
+pkill -x qs; hyprctl reload; ~/.local/bin/launch-waybar &
 ```
 
 Outside git: `systemctl --user mask dunst` (undo with `unmask`).
