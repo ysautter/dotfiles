@@ -246,9 +246,13 @@ if [ "$TMUX" = "" ]; then tmux; fi
 #term="st"
 #>>>>>>> 558b820 (Commit from tower)
 
-bindkey '^[f' fzf-cd-widget
+#bindkey '^[f' fzf-cd-widget
+
+source /usr/share/fzf/key-bindings.zsh
+source /usr/share/fzf/completion.zsh
 
 export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init - zsh)"
 
+eval "$(fnm env --use-on-cd --shell zsh)"
