@@ -24,4 +24,7 @@ Singleton {
     readonly property int animMed: 280
     readonly property int animSlow: 450
     readonly property int animColor: 900     // wallpaper colour cross-fade
+
+    // behaviour
+    readonly property int idleLockMinutes: 15  // 0 = never lock on idle
 }

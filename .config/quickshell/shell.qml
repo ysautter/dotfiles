@@ -23,4 +23,5 @@ ShellRoot {
     PowerMenu {}
     WallpaperPicker {}
     MonitorMenu {}
+    Lock {}
 }

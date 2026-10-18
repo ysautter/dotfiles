@@ -37,7 +37,7 @@ PanelWindow {
         id: frame
         width: parent.width
         height: parent.height
-        x: Notifs.centerOpen ? 0 : width + 20
+        x: Notifs.centerOpen ? 0 : 440
         Behavior on x { NumberAnimation { id: slide; duration: Theme.animSlow; easing.type: Easing.OutCubic } }
         color: Qt.alpha(Colors.background, 0.96)
         border.width: 1
