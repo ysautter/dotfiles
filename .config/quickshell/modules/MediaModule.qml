@@ -9,10 +9,11 @@ BarModule {
     id: root
 
     signal panelRequested(string name, Item anchor)
+    property bool compact: false
 
     icon: Media.playing ? "\uf04b" : "\uf04c"   // play / pause
     text: Media.artist ? `${Media.title} — ${Media.artist}` : Media.title
-    shown: Media.active
+    shown: Media.active && !compact
     maxTextWidth: 240
     clickable: true
     textColor: Media.playing ? Colors.fg : Qt.alpha(Colors.fg, 0.6)

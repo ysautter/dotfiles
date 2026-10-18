@@ -17,7 +17,7 @@ BarModule {
     readonly property string appClass: toplevel?.lastIpcObject?.class ?? ""
 
     text: onThisMonitor ? (toplevel.title || appClass) : ""
-    shown: text !== ""
+    shown: text !== "" && maxTextWidth >= 80
     maxTextWidth: 420
     tooltip: onThisMonitor ? `${toplevel.title}\n${appClass}` : ""
 

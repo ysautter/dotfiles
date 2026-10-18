@@ -8,8 +8,9 @@ BarModule {
     id: root
 
     signal panelRequested(string name, Item anchor)
+    property bool compact: false
 
-    text: ClaudeUsage.text
+    text: compact ? ClaudeUsage.text.replace(/\s*↻.*$/, "") : ClaudeUsage.text
     tooltip: ClaudeUsage.tooltip
     clickable: true
     level: ClaudeUsage.pct / 100

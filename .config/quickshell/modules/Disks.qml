@@ -10,6 +10,7 @@ Row {
     id: root
 
     property var mounts: ["/", "/media/storage", "/media/data"]
+    property bool compact: false
     property var info: ({})   // target -> { avail, size }
 
     height: Theme.barHeight
@@ -21,7 +22,7 @@ Row {
             required property string modelData
             readonly property var d: root.info[modelData]
 
-            shown: d !== undefined
+            shown: d !== undefined && (!root.compact || modelData === "/")
             text: d ? `${modelData} ${(d.avail / 1e9).toFixed(2)} GB` : ""
             level: d ? 1 - d.avail / d.size : -1
             levelColor: d && d.avail / d.size < 0.05 ? Colors.critical

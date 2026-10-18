@@ -30,6 +30,9 @@ PanelWindow {
     // panels with text input (Wi-Fi password) need keyboard focus
     WlrLayershell.keyboardFocus: panel !== "" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
+    // narrow screens (e.g. a portrait monitor): drop less important details
+    readonly property bool compact: width < 1800
+
     // ---- panel management ---------------------------------------------------------
     property string panel: ""
     property Item panelAnchor: null
@@ -91,14 +94,16 @@ PanelWindow {
 
         Block {
             id: centre
-            // centred, but pushed left if the right block would overlap it
-            x: Math.min(Math.round((parent.width - width) / 2), right.x - width - 12)
+            // centred, pushed left if the right block would overlap it, but
+            // never over the workspaces
+            x: Math.max(left.x + workspaces.implicitWidth + submap.implicitWidth + 12,
+                        Math.min(Math.round((parent.width - width) / 2), right.x - width - 12))
             y: Theme.gapTop
             opacity: 0
             Intro { target: centre; delay: 80 }
 
             IslandView {
-                MediaModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+                MediaModule { compact: bar.compact; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
                 Clocks { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             }
         }
@@ -112,14 +117,14 @@ PanelWindow {
 
             PresentationModule {}
             PrivacyModule {}
-            Claude { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            Claude { compact: bar.compact; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             UpdatesModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            Network { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            Network { compact: bar.compact; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             SystemStats { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             BluetoothModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Battery { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Volume { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            Disks {}
+            Disks { compact: bar.compact }
             NotifModule {}
             Tray {}
         }
