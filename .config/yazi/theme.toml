@@ -15,3 +15,13 @@ sep_outer = { open = "", close = "" }
 [status]
 sep_left  = { open = "", close = "" }
 sep_right = { open = "", close = "" }
+
+[indicator]
+#padding = { open = "", close = "" }
+padding = { open = "█", close = "█" }
+
+[app]
+overall = { fg = "#16161d"}
+
+[mgr]
+cwd = { fg = "#7fb4ca" }
