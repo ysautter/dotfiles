@@ -97,8 +97,10 @@ PanelWindow {
             opacity: 0
             Intro { target: centre; delay: 80 }
 
-            MediaModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            Clocks { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            IslandView {
+                MediaModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+                Clocks { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            }
         }
 
         Block {

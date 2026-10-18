@@ -3,7 +3,6 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Pipewire
-import Quickshell.Services.UPower
 import QtQuick
 
 // State of the on-screen display (volume / mic / brightness / power).
@@ -75,13 +74,6 @@ Singleton {
         }
     }
 
-    // ---- power ---------------------------------------------------------------
-    readonly property bool onBattery: UPower.onBattery
-    onOnBatteryChanged: {
-        const pct = Math.round((UPower.displayDevice?.percentage ?? 0) * 100);
-        show(onBattery ? "\uf242" : "\uf0e7", onBattery ? `On battery · ${pct}%` : `Charging · ${pct}%`,
-             pct / 100, false);
-    }
 
     // ---- brightness (pushed by keybinds) -------------------------------------
     Process {

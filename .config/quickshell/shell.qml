@@ -24,4 +24,6 @@ ShellRoot {
     WallpaperPicker {}
     MonitorMenu {}
     Lock {}
+    Screenshot {}
+    Overview {}
 }

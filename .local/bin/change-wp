@@ -256,9 +256,12 @@ else
 fi
 
 # 4. Live-reload waybar so it picks up the new colors (SIGUSR2 = reload, no flicker).
+#    (quickshell watches colors.css / dominant.css itself)
 if pgrep -x waybar >/dev/null; then
   killall -SIGUSR2 waybar
 fi
+# kitty re-reads its config (incl. colors-wallust.conf) on SIGUSR1
+pkill -USR1 -x kitty 2>/dev/null
 
 echo "Wallpaper and colors updated successfully!"
 echo "Note: Hyprlock will use the new background the next time it is invoked."
