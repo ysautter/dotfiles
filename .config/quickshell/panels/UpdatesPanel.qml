@@ -9,6 +9,8 @@ Column {
     width: parent.width
     spacing: 8
 
+    property int maxListHeight: 320
+
     Text {
         text: Updates.count > 0 ? `\uf487  ${Updates.count} update${Updates.count === 1 ? "" : "s"} available` : "System is up to date"
         color: Colors.fg
@@ -18,7 +20,7 @@ Column {
 
     ListView {
         width: root.width
-        height: Math.min(contentHeight, 320)
+        height: Math.min(contentHeight, root.maxListHeight)
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         model: Updates.packages

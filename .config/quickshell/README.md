@@ -26,9 +26,25 @@ features: `qs ipc show`.
 | `SUPER+CTRL+P` | presentation mode (DND + no idle lock) |
 | `SUPER+ALT+CTRL+L` | lock (falls back to hyprlock) |
 
-Bar: click modules for panels (media, calendar, Claude, updates, network,
-system, bluetooth, battery, audio); right-click volume = mute, scroll =
-volume/workspaces.
+## Bar ("calm bar")
+
+```
+[ workspaces · title ]      [ ♪ media │ 23:32 ]      [ attention │ tray │ 󰤨  42% │ 🔔 ]
+```
+
+- **Clock** → dashboard: calendar, media, CPU/memory, disks, Claude, updates.
+- **Status group** (network · bluetooth · mic-muted · volume · battery) →
+  quick settings panel with one tab per area. Scroll = volume, right click on
+  the speaker = mute, middle click = pavucontrol.
+- **Attention area**: only appears when something needs you – updates,
+  Claude ≥ 70 % or an error, a disk ≥ 85 % full, CPU ≥ 80 % (30 s average),
+  memory ≥ 85 %. Thresholds: `Theme.attn*`.
+- **Primary monitor only**: attention, tray, media, bell. Other monitors show
+  workspaces, clock and the status group. Primary = first connected output of
+  `Theme.primaryOutputs`, else the widest landscape monitor.
+- `qs ipc call bar-<output> panel <name>`: `dashboard`, `quick:<tab>`
+  (`network`, `bluetooth`, `audio`, `battery`), `media`, `system`, `claude`,
+  `updates`.
 
 ## Layout
 
@@ -61,6 +77,8 @@ Every step is a tag in the dotfiles repo (`config tag -l 'qs-*'`):
 | `qs-6-launcher` | + launcher, power menu, wallpaper picker, displays menu |
 | `qs-7-lock` | + lock screen |
 | `qs-8-extras` | + island, screenshot tool, overview, kitty colours |
+| `pre-calm-bar` | full bar with every module (before the calm bar) |
+| `qs-9-calm-bar` | + calm bar: dashboard, quick settings, attention area, primary monitor |
 
 ```sh
 # restore the quickshell config of a step (keeps other dotfiles as they are)

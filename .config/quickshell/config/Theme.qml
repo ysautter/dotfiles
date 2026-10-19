@@ -27,4 +27,19 @@ Singleton {
 
     // behaviour
     readonly property int idleLockMinutes: 15  // 0 = never lock on idle
+
+    // ---- calm bar -------------------------------------------------------------
+    // The full bar (attention area, tray, media, bell) is shown on the primary
+    // monitor only; other monitors get workspaces, clock and the status group.
+    // Primary = the first of these outputs that is connected, otherwise the
+    // widest landscape monitor.
+    readonly property var primaryOutputs: []   // e.g. ["DP-1", "eDP-1"]
+
+    // attention area: an item only appears when it needs you
+    readonly property int attnUpdates: 1        // pending updates >= this
+    readonly property int attnClaude: 70        // Claude usage % >= this (or an error)
+    readonly property int attnDisk: 85          // disk used % >= this
+    readonly property int attnCpu: 80           // CPU % averaged over the last 30 s
+    readonly property int attnMem: 85           // memory used % >= this
+    readonly property var diskMounts: ["/", "/home", "/media/storage", "/media/data"]
 }

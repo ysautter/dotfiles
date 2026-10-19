@@ -17,13 +17,14 @@ Item {
     property color levelColor: textColor
     property color background: "transparent"
     property int maxTextWidth: 0           // > 0: elide longer text
+    property int hpadding: Theme.padding   // left/right padding
     property alias iconItem: iconText
 
     signal clicked(int button)
     signal scrolled(int delta)
 
     implicitHeight: Theme.barHeight
-    implicitWidth: shown ? content.implicitWidth + Theme.padding * 2 : 0
+    implicitWidth: shown ? content.implicitWidth + hpadding * 2 : 0
     visible: implicitWidth > 0.5
     clip: true
 
@@ -93,13 +94,17 @@ Item {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         cursorShape: root.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
-        onClicked: e => root.clicked(e.button)
+        onClicked: e => { clickedSinceHover = true; root.clicked(e.button); }
+        // after a click (usually opening a panel) keep the tooltip hidden
+        // until the pointer leaves the module
+        property bool clickedSinceHover: false
+        onContainsMouseChanged: if (!containsMouse) clickedSinceHover = false
         onWheel: w => root.scrolled(w.angleDelta.y)
     }
 
     Tooltip {
         target: root
         text: root.tooltip
-        hovered: mouse.containsMouse
+        hovered: mouse.containsMouse && !mouse.clickedSinceHover
     }
 }

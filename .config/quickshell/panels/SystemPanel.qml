@@ -11,6 +11,7 @@ Column {
     spacing: 8
 
     property bool active: false
+    property bool showTop: true
     onActiveChanged: SysMon.wantTop = active
 
     component Stat: Item {
@@ -48,9 +49,35 @@ Column {
     }
     Graph { width: root.width; height: 40; values: SysMon.memHistory; max: 1; lineColor: Colors.accent }
 
-    SectionHeader { text: "Top processes" }
+    SectionHeader { text: "Disks" }
     Repeater {
-        model: SysMon.top
+        model: Storage.disks
+        Column {
+            required property var modelData
+            width: root.width
+            spacing: 3
+            Stat {
+                label: modelData.mount
+                value: `${(modelData.avail / 1e9).toFixed(1)} GB free of ${(modelData.size / 1e9).toFixed(0)} GB`
+                tint: modelData.used * 100 >= Theme.attnDisk ? Colors.warning : Colors.fg
+            }
+            Rectangle {
+                width: root.width
+                height: 3
+                color: Qt.alpha(Colors.fg, 0.12)
+                Rectangle {
+                    width: parent.width * modelData.used
+                    height: parent.height
+                    color: modelData.used > 0.95 ? Colors.critical : modelData.used * 100 >= Theme.attnDisk ? Colors.warning : Colors.fg
+                    opacity: 0.8
+                }
+            }
+        }
+    }
+
+    SectionHeader { text: "Top processes"; visible: root.showTop }
+    Repeater {
+        model: root.showTop ? SysMon.top : []
         Item {
             required property var modelData
             width: root.width

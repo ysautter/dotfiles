@@ -9,7 +9,9 @@ import qs.modules
 import qs.panels
 import qs.services
 
-// Top bar: workspaces (left) | media + clocks (centre) | status modules (right).
+// Top bar: workspaces (left) | media + clock (centre) | attention, tray,
+// status group, bell (right). The primary monitor gets the full bar, the
+// others only workspaces, clock and the status group (see Theme.primaryOutputs).
 // Clicking a module opens its panel; clicking elsewhere closes it.
 PanelWindow {
     id: bar
@@ -32,12 +34,29 @@ PanelWindow {
 
     // narrow screens (e.g. a portrait monitor): drop less important details
     readonly property bool compact: width < 1800
+    // full bar only on the primary monitor
+    readonly property bool primary: Monitors.primary === screen.name
 
     // ---- panel management ---------------------------------------------------------
     property string panel: ""
     property Item panelAnchor: null
+    property string quickTab: "network"
 
+    // "quick:<tab>" opens the quick settings panel on that tab (or switches
+    // the tab if it is already open)
     function togglePanel(name, anchor) {
+        // old panel names (keybinds, scripts)
+        if (["network", "bluetooth", "audio", "battery"].includes(name)) name = "quick:" + name;
+        if (name === "calendar") name = "dashboard";
+        if (name.startsWith("quick:")) {
+            const tab = name.slice(6);
+            if (panel === "quick" && quickTab !== tab) {
+                quickTab = tab;
+                return;
+            }
+            quickTab = tab;
+            name = "quick";
+        }
         if (panel === name) {
             panel = "";
         } else {
@@ -55,7 +74,7 @@ PanelWindow {
     HyprlandFocusGrab {
         // the panels are popup windows (not Items), so list them explicitly;
         // clicks inside windows that are not part of the grab are blocked
-        windows: [bar, ...[panel_media, panel_calendar, panel_claude, panel_updates, panel_network, panel_system, panel_bluetooth, panel_battery, panel_audio].filter(p => p.visible)]
+        windows: [bar, ...[panel_media, panel_dashboard, panel_quick, panel_claude, panel_updates, panel_system].filter(p => p.visible)]
         active: bar.panel !== ""
         onCleared: bar.panel = ""
     }
@@ -105,7 +124,7 @@ PanelWindow {
             Intro { target: centre; delay: 80 }
 
             IslandView {
-                MediaModule { compact: bar.compact; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+                MediaModule { compact: bar.compact || !bar.primary; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
                 Clocks { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             }
         }
@@ -119,16 +138,10 @@ PanelWindow {
 
             PresentationModule {}
             PrivacyModule {}
-            Claude { compact: bar.compact; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            UpdatesModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            Network { compact: bar.compact; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            SystemStats { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            BluetoothModule { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            Battery { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            Volume { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            Disks { compact: bar.compact }
-            NotifModule {}
-            Tray {}
+            Attention { visible: bar.primary; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            Tray { visible: bar.primary }
+            StatusGroup { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            NotifModule { shown: bar.primary }
         }
     }
 
@@ -136,15 +149,19 @@ PanelWindow {
     Item {
         id: panels
 
-        BarPanel { id: panel_media; bar: bar; name: "media";     panelWidth: 380; MediaPanel { active: bar.panel === "media" } }
-        BarPanel { id: panel_calendar; bar: bar; name: "calendar";  panelWidth: 320; CalendarPanel { active: bar.panel === "calendar" } }
-        BarPanel { id: panel_claude; bar: bar; name: "claude";    panelWidth: 320; ClaudePanel {} }
-        BarPanel { id: panel_updates; bar: bar; name: "updates";   panelWidth: 420; UpdatesPanel {} }
-        BarPanel { id: panel_network; bar: bar; name: "network";   panelWidth: 380; NetworkPanel { active: bar.panel === "network" } }
-        BarPanel { id: panel_system; bar: bar; name: "system";    panelWidth: 360; SystemPanel { active: bar.panel === "system" } }
-        BarPanel { id: panel_bluetooth; bar: bar; name: "bluetooth"; panelWidth: 360; BluetoothPanel { active: bar.panel === "bluetooth" } }
-        BarPanel { id: panel_battery; bar: bar; name: "battery";   panelWidth: 320; BatteryPanel {} }
-        BarPanel { id: panel_audio; bar: bar; name: "audio";     panelWidth: 400; AudioPanel {} }
+        BarPanel { id: panel_dashboard; bar: bar; name: "dashboard"; panelWidth: 1020; DashboardPanel { open: bar.panel === "dashboard" } }
+        BarPanel {
+            id: panel_quick; bar: bar; name: "quick"; panelWidth: 400
+            QuickPanel {
+                open: bar.panel === "quick"
+                tab: bar.quickTab
+                onTabRequested: name => bar.quickTab = name
+            }
+        }
+        BarPanel { id: panel_media;   bar: bar; name: "media";   panelWidth: 380; MediaPanel { active: bar.panel === "media" } }
+        BarPanel { id: panel_claude;  bar: bar; name: "claude";  panelWidth: 320; ClaudePanel {} }
+        BarPanel { id: panel_updates; bar: bar; name: "updates"; panelWidth: 420; UpdatesPanel {} }
+        BarPanel { id: panel_system;  bar: bar; name: "system";  panelWidth: 360; SystemPanel { active: bar.panel === "system" } }
     }
 
     // `qs ipc call bar panel <name>` (e.g. for keybinds)
