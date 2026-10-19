@@ -226,6 +226,9 @@ echo "Generating colors with wallust..."
 # non-draining TTY and hang the whole script; waybar theming uses templates, not
 # sequences, so this loses nothing here.
 wallust run --skip-sequences "$THEME_WP"
+# kitty is translucent: make its palette readable on the wallpapers shown
+# (lightens colours / raises opacity only as far as needed)
+python3 "$HOME/.config/kitty/contrast.py"
 
 # 3b. Pick the most VIVID characteristic color of the wallpaper (the one that
 #     "pops"), not the most frequent one, and expose it to waybar as @dominant
