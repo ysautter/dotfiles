@@ -35,7 +35,7 @@ BarModule {
     }
     onScrolled: delta => {
         if (!sink?.audio) return;
-        const step = delta > 0 ? 0.05 : -0.05;
+        const step = delta > 0 ? 0.005 : -0.005;
         sink.audio.volume = Math.max(0, Math.min(1.5, sink.audio.volume + step));
     }
 }
