@@ -6,7 +6,7 @@ import qs.services
 
 ShellRoot {
     // services that must run from startup (singletons are created lazily)
-    readonly property var _services: [Clip, Notifs, Presentation]
+    readonly property var _services: [Clip, Notifs, Presentation, HyprTheme]
 
     // one bar per monitor
     Variants {

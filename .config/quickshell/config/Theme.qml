@@ -26,7 +26,7 @@ Singleton {
     readonly property int animColor: 900     // wallpaper colour cross-fade
 
     // behaviour
-    readonly property int idleLockMinutes: 15  // 0 = never lock on idle
+    // idle lock: hypridle (hypr/hypridle.conf) calls `qs ipc call lock lock`
 
     // ---- calm bar -------------------------------------------------------------
     // The full bar (attention area, tray, media, bell) is shown on the primary

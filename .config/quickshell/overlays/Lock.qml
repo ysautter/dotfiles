@@ -107,12 +107,4 @@ Scope {
             root.previewOpen = !root.previewOpen;
         }
     }
-
-    // ---- idle: lock after N minutes (presentation mode inhibits this) -----------------
-    IdleMonitor {
-        enabled: Theme.idleLockMinutes > 0 && !sessionLock.locked
-        timeout: Theme.idleLockMinutes * 60
-        respectInhibitors: true
-        onIsIdleChanged: if (isIdle) root.lock()
-    }
 }

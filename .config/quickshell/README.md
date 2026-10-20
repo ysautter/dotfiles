@@ -49,6 +49,15 @@ features: `qs ipc show`.
   (`network`, `bluetooth`, `audio`, `battery`), `system`, `claude`,
   `updates`.
 
+## Idle lock and Hyprland theming
+
+- **Idle lock**: hypridle (`hypr/hypridle.conf`) runs `qs ipc call lock lock`
+  after 15 min. Video in the browser, games (D-Bus screensaver inhibit), any
+  Wayland inhibitor and fullscreen windows block it.
+- **Group tab bar**: `services/HyprTheme.qml` gives Hyprland's groupbar the
+  bar's colours and font via `hyprctl keyword`, again after wallpaper changes
+  and config reloads.
+
 ## Layout
 
 ```
@@ -93,4 +102,5 @@ systemctl --user unmask dunst
 pkill -x qs; hyprctl reload; ~/.local/bin/launch-waybar &
 ```
 
-Outside git: `systemctl --user mask dunst` (undo with `unmask`).
+Outside git: `systemctl --user mask dunst` (undo with `unmask`), package
+`hypridle` (idle lock, see `hypr/hypridle.conf`).
