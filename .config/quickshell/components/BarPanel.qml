@@ -48,6 +48,29 @@ PopupWindow {
             height: root.contentHeight
         }
 
+        // keyboard navigation: ring around the focused item
+        Rectangle {
+            id: navRing
+            readonly property Item t: root.open ? (root.bar.navPanelTarget ?? null) : null
+            visible: t !== null
+            z: 100
+            color: Qt.alpha(Colors.hover, 0.3)
+            border.width: 1
+            border.color: Colors.fg
+            Behavior on x { NumberAnimation { duration: Theme.animFast; easing.type: Easing.OutCubic } }
+            Behavior on y { NumberAnimation { duration: Theme.animFast; easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: Theme.animFast; easing.type: Easing.OutCubic } }
+            Behavior on height { NumberAnimation { duration: Theme.animFast; easing.type: Easing.OutCubic } }
+
+            function place() {
+                if (!t) return;
+                const p = t.mapToItem(frame, 0, 0);
+                x = p.x - 3; y = p.y - 2; width = t.width + 6; height = t.height + 4;
+            }
+            onTChanged: place()
+            Timer { interval: 50; repeat: true; running: navRing.visible; onTriggered: navRing.place() }
+        }
+
         // accent line on top, like the bar's underline
         Rectangle {
             width: parent.width

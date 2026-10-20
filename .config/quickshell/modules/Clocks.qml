@@ -30,6 +30,7 @@ Row {
 
     BarModule {
         id: day
+        navSkip: true        // same dashboard as the time
         text: Qt.formatDateTime(clock.date, "dd.MM.yy")
         tooltip: Qt.formatDateTime(clock.date, "dddd, d. MMMM yyyy")
         clickable: true

@@ -25,6 +25,7 @@ features: `qs ipc show`.
 | `SUPER+CTRL+M` | displays menu (layouts, presentation mode, wdisplays) |
 | `SUPER+CTRL+P` | presentation mode (DND + no idle lock) |
 | `SUPER+ALT+CTRL+L` | lock (falls back to hyprlock) |
+| `SUPER+B` | keyboard navigation of the bar (vi keys, see below) |
 
 ## Bar ("calm bar")
 
@@ -49,6 +50,20 @@ features: `qs ipc show`.
 - `qs ipc call bar-<output> panel <name>`: `dashboard`, `quick:<tab>`
   (`network`, `bluetooth`, `audio`, `battery`), `system`, `claude`,
   `updates`.
+
+## Keyboard navigation (`SUPER+B`)
+
+| Bar | Panel |
+|---|---|
+| `h`/`l` previous/next module, `0`/`$` first/last | `h j k l` move (spatially), `gg`/`G` first/last |
+| `Enter`/`Space`/`o` open, `j` into the panel | `h`/`l` on a slider: change it |
+| `r`/`m` right-click action (refresh, mute, DND) | `H`/`L` previous/next tab |
+| `1`–`9` workspace | `k` at the top / `Esc`: back to the bar |
+
+Jumps: `n` network, `b` bluetooth, `a` audio, `p` power, `d`/`c` dashboard,
+`u` updates, `s` system, `C` Claude, `N` notifications. `q` quits. Text fields
+(Wi-Fi password): just type, `Enter` connects, `Esc` cancels. Targets are any
+visible item with `navigable: true` (`components/BarNavigator.qml`).
 
 ## Idle lock and Hyprland theming
 

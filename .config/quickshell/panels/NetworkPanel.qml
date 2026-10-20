@@ -122,7 +122,9 @@ Column {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
+                    readonly property bool navigable: true
+                    onClicked: navActivate()
+                    function navActivate() {
                         const n = row.modelData;
                         if (n.active) return;
                         const secured = n.security && n.security !== "--";
@@ -152,6 +154,8 @@ Column {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 90
                     echoMode: TextInput.Password
+                    // keyboard navigation: BarNavigator types into it
+                    readonly property bool navigable: true
                     color: Colors.fg
                     font.family: Theme.font
                     font.pixelSize: Theme.fontSize - 1

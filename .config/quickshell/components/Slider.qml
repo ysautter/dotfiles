@@ -12,6 +12,11 @@ Item {
     property bool dragging: mouse.pressed
     signal moved(real value)
 
+    // keyboard navigation (BarNavigator): h / l change the value
+    readonly property bool navigable: true
+    function navActivate() {}
+    function navAdjust(dir) { moved(Math.max(0, Math.min(to, value + dir * step))); }
+
     implicitHeight: 18
     implicitWidth: 200
 

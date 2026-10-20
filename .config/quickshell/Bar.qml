@@ -30,7 +30,9 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-bar"
     WlrLayershell.layer: WlrLayer.Top
     // panels with text input (Wi-Fi password) need keyboard focus
-    WlrLayershell.keyboardFocus: panel !== "" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // keyboard navigation (SUPER+B) takes the keyboard exclusively
+    WlrLayershell.keyboardFocus: navActive ? WlrKeyboardFocus.Exclusive
+                               : panel !== "" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     // narrow screens (e.g. a portrait monitor): drop less important details
     readonly property bool compact: width < 1800
@@ -41,6 +43,37 @@ PanelWindow {
     property string panel: ""
     property Item panelAnchor: null
     property string quickTab: "network"
+
+    // ---- keyboard navigation (components/BarNavigator.qml) -----------------------
+    property bool navActive: false
+    property Item navPanelTarget: null        // focused item in the open panel
+    property bool navGrab: false
+    onNavActiveChanged: if (navActive) navGrabTimer.restart(); else navGrab = false
+    Timer { id: navGrabTimer; interval: 150; onTriggered: bar.navGrab = bar.navActive }
+    readonly property Item centreBlock: centre
+    readonly property Item rightBlock: right
+
+    Connections {
+        target: BarNav
+        function onToggleRequested(screen) {
+            if (screen !== bar.screen.name) return;
+            if (bar.navActive) navigator.stop(); else navigator.start("");
+        }
+        function onJumpRequested(screen, name) {
+            if (screen !== bar.screen.name) return;
+            const map = { network: "quick:network", bluetooth: "quick:bluetooth", audio: "quick:audio",
+                          power: "quick:battery", battery: "quick:battery" };
+            navigator.start(map[name] ?? name);
+        }
+    }
+
+    // like togglePanel, but never closes
+    function openPanel(name, anchor) {
+        if (["network", "bluetooth", "audio", "battery"].includes(name)) name = "quick:" + name;
+        if (name.startsWith("quick:")) { quickTab = name.slice(6); name = "quick"; }
+        panelAnchor = anchor;
+        panel = name;
+    }
 
     // "quick:<tab>" opens the quick settings panel on that tab (or switches
     // the tab if it is already open)
@@ -75,8 +108,10 @@ PanelWindow {
         // the panels are popup windows (not Items), so list them explicitly;
         // clicks inside windows that are not part of the grab are blocked
         windows: [bar, ...[panel_dashboard, panel_quick, panel_claude, panel_updates, panel_system].filter(p => p.visible)]
-        active: bar.panel !== ""
-        onCleared: bar.panel = ""
+        // nav mode arms the grab only once the bar has the keyboard; armed in
+        // the same frame, Hyprland clears it right away
+        active: bar.panel !== "" || bar.navGrab
+        onCleared: { bar.panel = ""; bar.navActive = false; }
     }
 
     Item {
@@ -142,6 +177,44 @@ PanelWindow {
             StatusGroup { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             NotifModule { shown: bar.primary }
         }
+    }
+
+    // keyboard navigation: focus ring on the bar module + key hint
+    BarNavigator {
+        id: navigator
+        bar: bar
+        content: content
+        panelWindows: [panel_dashboard, panel_quick, panel_claude, panel_updates, panel_system]
+    }
+
+    Rectangle {
+        id: navRing
+        parent: content
+        z: 50
+        readonly property Item t: navigator.barTarget
+        visible: bar.navActive && t !== null
+        opacity: navigator.level === "bar" ? 1 : 0.45
+        color: Qt.alpha(Colors.hover, 0.35)
+        x: 0; y: Theme.gapTop; width: 0; height: Theme.barHeight
+        Behavior on x { NumberAnimation { duration: Theme.animFast; easing.type: Easing.OutCubic } }
+        Behavior on width { NumberAnimation { duration: Theme.animFast; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Theme.animFast } }
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: Colors.fg }
+
+        // modules move and resize (animations, changing text): follow them
+        function place() {
+            if (!t) return;
+            const p = t.mapToItem(content, 0, 0);
+            x = p.x; width = t.width;
+        }
+        onTChanged: place()
+        Timer { interval: 60; repeat: true; running: navRing.visible; onTriggered: navRing.place() }
+    }
+
+    Tooltip {
+        target: centre
+        hovered: bar.navActive && bar.panel === ""
+        text: "h/l move · ⏎ open · j into panel · r/m alt action · 1-9 workspace\nn net · b bt · a audio · p power · d dashboard · u updates · s system · C claude · N notifs · q quit"
     }
 
     // ---- panels ---------------------------------------------------------------------------

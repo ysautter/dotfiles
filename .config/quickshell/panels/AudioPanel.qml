@@ -39,7 +39,9 @@ Column {
                 anchors.fill: parent
                 anchors.margins: -4
                 cursorShape: Qt.PointingHandCursor
-                onClicked: if (vr.node?.audio) vr.node.audio.muted = !vr.node.audio.muted
+                readonly property bool navigable: true
+                function navActivate() { if (vr.node?.audio) vr.node.audio.muted = !vr.node.audio.muted; }
+                onClicked: navActivate()
             }
         }
         Text {
@@ -93,7 +95,12 @@ Column {
             font.family: Theme.font
             font.pixelSize: Theme.fontSize - 1
         }
-        MouseArea { id: m; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: dr.picked() }
+        MouseArea {
+            id: m; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+            readonly property bool navigable: true
+            function navActivate() { dr.picked(); }
+            onClicked: navActivate()
+        }
     }
 
     SectionHeader { text: "Output" }

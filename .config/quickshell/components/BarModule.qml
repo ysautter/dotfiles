@@ -18,6 +18,9 @@ Item {
     property color background: "transparent"
     property int maxTextWidth: 0           // > 0: elide longer text
     property int hpadding: Theme.padding   // left/right padding
+    // keyboard navigation (BarNavigator): clickable modules are reachable
+    property bool navSkip: false           // clickable, but not a keyboard target
+    readonly property bool navigable: clickable && shown && !navSkip
     property alias iconItem: iconText
 
     signal clicked(int button)

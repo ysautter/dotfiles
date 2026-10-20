@@ -8,6 +8,10 @@ Rectangle {
     property bool checked: false
     signal toggled(bool checked)
 
+    // keyboard navigation (BarNavigator)
+    readonly property bool navigable: true
+    function navActivate() { toggled(!checked); }
+
     implicitWidth: 38
     implicitHeight: 20
     color: checked ? Colors.active : Qt.alpha(Colors.fg, 0.12)

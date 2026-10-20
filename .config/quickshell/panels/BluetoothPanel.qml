@@ -86,7 +86,9 @@ Column {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: {
+                readonly property bool navigable: true
+                onClicked: navActivate()
+                function navActivate() {
                     const d = row.modelData;
                     if (d.connected) d.disconnect();
                     else if (d.paired) d.connect();

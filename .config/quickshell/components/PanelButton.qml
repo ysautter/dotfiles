@@ -13,6 +13,10 @@ Rectangle {
     property int fontSize: Theme.fontSize - 1
     signal clicked()
 
+    // keyboard navigation (BarNavigator)
+    readonly property bool navigable: available
+    function navActivate() { if (available) clicked(); }
+
     implicitWidth: row.implicitWidth + 16
     implicitHeight: 26
     opacity: available ? 1 : 0.4

@@ -58,7 +58,7 @@ Column {
             color: Colors.fg
             font.family: Theme.font
             font.pixelSize: Theme.fontSize + 1
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.reset() }
+            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; readonly property bool navigable: true; function navActivate() { root.reset(); } onClicked: navActivate() }
         }
         PanelButton { anchors.right: parent.right; icon: "\uf054"; onClicked: root.shift(1) }
     }
