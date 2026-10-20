@@ -62,7 +62,7 @@ PanelWindow {
             timeout: Notifs.timeoutFor(modelData)
             onExpired: {
                 Notifs.removePopup(modelData);
-                if (modelData.transient) modelData.expire();
+                if (modelData?.transient) modelData.expire();
             }
         }
     }

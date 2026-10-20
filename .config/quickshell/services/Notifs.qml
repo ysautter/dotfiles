@@ -13,16 +13,18 @@ Singleton {
     id: root
 
     property var popups: []
-    readonly property var history: server.trackedNotifications.values.slice().reverse()
-    readonly property int count: server.trackedNotifications.values.length
+    // transient notifications only live as a popup, never in the centre
+    readonly property var history: server.trackedNotifications.values.filter(n => !n.transient).reverse()
+    readonly property int count: history.length
     property bool dnd: false
     property bool centerOpen: false
     property var times: ({})            // notification id -> arrival time
 
     signal notified(Notification n)
 
+    // also drops entries whose notification object is already gone (null)
     function removePopup(n) {
-        popups = popups.filter(p => p !== n);
+        popups = popups.filter(p => p && p !== n);
     }
 
     function dismiss(n) {
@@ -44,6 +46,7 @@ Singleton {
     }
 
     function timeoutFor(n) {
+        if (!n) return 1;                                                    // gone: expire now
         if (n.urgency === NotificationUrgency.Critical) return 0;            // sticky
         if (n.expireTimeout > 0) return Math.max(2000, n.expireTimeout);
         return n.urgency === NotificationUrgency.Low ? 3500 : 6000;
@@ -61,7 +64,11 @@ Singleton {
         imageSupported: true
 
         onNotification: n => {
-            n.tracked = !n.transient;
+            // Track every notification, also transient ones: an untracked one
+            // is destroyed right away and would leave an empty popup behind.
+            // Transient ones are expired when their popup ends (see
+            // NotificationPopups) and are hidden from the history.
+            n.tracked = true;
             root.times[n.id] = new Date();
             n.closed.connect(() => root.removePopup(n));
             if (!root.dnd || n.urgency === NotificationUrgency.Critical)
