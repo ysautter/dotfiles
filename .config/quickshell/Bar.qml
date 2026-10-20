@@ -9,7 +9,7 @@ import qs.modules
 import qs.panels
 import qs.services
 
-// Top bar: workspaces (left) | media + clock (centre) | attention, tray,
+// Top bar: workspaces (left) | clock (centre) | attention, glance,
 // status group, bell (right). The primary monitor gets the full bar, the
 // others only workspaces, clock and the status group (see Theme.primaryOutputs).
 // Clicking a module opens its panel; clicking elsewhere closes it.
@@ -74,7 +74,7 @@ PanelWindow {
     HyprlandFocusGrab {
         // the panels are popup windows (not Items), so list them explicitly;
         // clicks inside windows that are not part of the grab are blocked
-        windows: [bar, ...[panel_media, panel_dashboard, panel_quick, panel_claude, panel_updates, panel_system].filter(p => p.visible)]
+        windows: [bar, ...[panel_dashboard, panel_quick, panel_claude, panel_updates, panel_system].filter(p => p.visible)]
         active: bar.panel !== ""
         onCleared: bar.panel = ""
     }
@@ -124,7 +124,6 @@ PanelWindow {
             Intro { target: centre; delay: 80 }
 
             IslandView {
-                MediaModule { compact: bar.compact || !bar.primary; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
                 Clocks { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             }
         }
@@ -140,7 +139,6 @@ PanelWindow {
             PrivacyModule {}
             Attention { visible: bar.primary; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Glance { visible: bar.primary; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
-            Tray { visible: bar.primary }
             StatusGroup { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             NotifModule { shown: bar.primary }
         }
@@ -159,7 +157,6 @@ PanelWindow {
                 onTabRequested: name => bar.quickTab = name
             }
         }
-        BarPanel { id: panel_media;   bar: bar; name: "media";   panelWidth: 380; MediaPanel { active: bar.panel === "media" } }
         BarPanel { id: panel_claude;  bar: bar; name: "claude";  panelWidth: 320; ClaudePanel {} }
         BarPanel { id: panel_updates; bar: bar; name: "updates"; panelWidth: 420; UpdatesPanel {} }
         BarPanel { id: panel_system;  bar: bar; name: "system";  panelWidth: 360; SystemPanel { active: bar.panel === "system" } }

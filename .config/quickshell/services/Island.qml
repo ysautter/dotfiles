@@ -50,14 +50,6 @@ Singleton {
     }
 
     // ---- event sources -----------------------------------------------------------------
-    Connections {
-        target: Media
-        function onTrackChanged() {
-            if (!Media.playing) return;
-            root.show("\uf001", Media.artist ? `${Media.title} — ${Media.artist}` : Media.title, { image: Media.artUrl });
-        }
-    }
-
     readonly property bool onBattery: UPower.onBattery
     onOnBatteryChanged: {
         const pct = Math.round((UPower.displayDevice?.percentage ?? 0) * 100);

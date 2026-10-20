@@ -29,10 +29,10 @@ features: `qs ipc show`.
 ## Bar ("calm bar")
 
 ```
-[ workspaces · title ]      [ ♪ media │ 23:32 ]      [ attention │ tray │ 󰤨  42% │ 🔔 ]
+[ workspaces · title ]      [ Tue │ 23:32 │ 20.10.26 ]      [ attention │ glance │ 󰤨 🔊 🔋 │ 🔔 ]
 ```
 
-- **Clock** (weekday · time · date) → dashboard: calendar, media, CPU/memory,
+- **Clock** (weekday · time · date) → dashboard: calendar, CPU/memory,
   disks, Claude, updates.
 - **Glance** (always, compact): Claude, CPU, memory with a level bar; yellow/red
   past `Theme.attnClaude/attnCpu/attnMem`. Choose them in `Theme.glance`.
@@ -41,11 +41,12 @@ features: `qs ipc show`.
   the speaker = mute, middle click = pavucontrol.
 - **Attention area**: only appears when something needs you – updates and
   disks ≥ 85 % full (`Theme.attnUpdates`, `Theme.attnDisk`).
-- **Primary monitor only**: attention, glance, tray, media, bell. Other monitors show
+- No tray and no media display (by choice; see tag `qs-9-calm-bar`).
+- **Primary monitor only**: attention, glance, bell. Other monitors show
   workspaces, clock and the status group. Primary = first connected output of
   `Theme.primaryOutputs`, else the widest landscape monitor.
 - `qs ipc call bar-<output> panel <name>`: `dashboard`, `quick:<tab>`
-  (`network`, `bluetooth`, `audio`, `battery`), `media`, `system`, `claude`,
+  (`network`, `bluetooth`, `audio`, `battery`), `system`, `claude`,
   `updates`.
 
 ## Layout
