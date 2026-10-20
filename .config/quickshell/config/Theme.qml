@@ -31,9 +31,11 @@ Singleton {
     // ---- calm bar -------------------------------------------------------------
     // The full bar (attention area, tray, media, bell) is shown on the primary
     // monitor only; other monitors get workspaces, clock and the status group.
-    // Primary = the first of these outputs that is connected, otherwise the
-    // widest landscape monitor.
-    readonly property var primaryOutputs: []   // e.g. ["DP-1", "eDP-1"]
+    // Primary = the first connected output listed for this host (short host
+    // name, lower case), otherwise the widest landscape monitor.
+    readonly property var primaryOutputs: ({
+        "yst": ["HDMI-A-1", "DP-1"],
+    })
 
     // attention area: an item only appears when it needs you
     readonly property int attnUpdates: 1        // pending updates >= this

@@ -43,8 +43,9 @@ features: `qs ipc show`.
   disks ≥ 85 % full (`Theme.attnUpdates`, `Theme.attnDisk`).
 - No tray and no media display (by choice; see tag `qs-9-calm-bar`).
 - **Primary monitor only**: attention, glance, bell. Other monitors show
-  workspaces, clock and the status group. Primary = first connected output of
-  `Theme.primaryOutputs`, else the widest landscape monitor.
+  workspaces, clock and the status group. Primary = first connected output listed for
+  this host in `Theme.primaryOutputs` (YST: HDMI-A-1, DP-1), else the widest
+  landscape monitor.
 - `qs ipc call bar-<output> panel <name>`: `dashboard`, `quick:<tab>`
   (`network`, `bluetooth`, `audio`, `battery`), `system`, `claude`,
   `updates`.
