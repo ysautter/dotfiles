@@ -32,14 +32,16 @@ features: `qs ipc show`.
 [ workspaces · title ]      [ ♪ media │ 23:32 ]      [ attention │ tray │ 󰤨  42% │ 🔔 ]
 ```
 
-- **Clock** → dashboard: calendar, media, CPU/memory, disks, Claude, updates.
+- **Clock** (weekday · time · date) → dashboard: calendar, media, CPU/memory,
+  disks, Claude, updates.
+- **Glance** (always, compact): Claude, CPU, memory with a level bar; yellow/red
+  past `Theme.attnClaude/attnCpu/attnMem`. Choose them in `Theme.glance`.
 - **Status group** (network · bluetooth · mic-muted · volume · battery) →
   quick settings panel with one tab per area. Scroll = volume, right click on
   the speaker = mute, middle click = pavucontrol.
-- **Attention area**: only appears when something needs you – updates,
-  Claude ≥ 70 % or an error, a disk ≥ 85 % full, CPU ≥ 80 % (30 s average),
-  memory ≥ 85 %. Thresholds: `Theme.attn*`.
-- **Primary monitor only**: attention, tray, media, bell. Other monitors show
+- **Attention area**: only appears when something needs you – updates and
+  disks ≥ 85 % full (`Theme.attnUpdates`, `Theme.attnDisk`).
+- **Primary monitor only**: attention, glance, tray, media, bell. Other monitors show
   workspaces, clock and the status group. Primary = first connected output of
   `Theme.primaryOutputs`, else the widest landscape monitor.
 - `qs ipc call bar-<output> panel <name>`: `dashboard`, `quick:<tab>`

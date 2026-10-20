@@ -7,7 +7,7 @@ import qs.config
 import qs.components
 import qs.services
 
-// Status group: network · bluetooth · (mic muted) · volume · battery as icons.
+// Status group: network · bluetooth · (mic muted) · volume % · battery %.
 // Each icon opens the quick settings panel on its tab; scrolling anywhere on
 // the group changes the volume, right click on the speaker mutes.
 Row {
@@ -87,6 +87,7 @@ Row {
         id: volume
         shown: root.sink !== null
         icon: root.muted ? "\u{f075f}" : root.vol < 34 ? "\uf026" : root.vol < 67 ? "\uf027" : "\uf028"
+        text: root.muted ? "" : root.vol + "%"
         textColor: root.muted ? Colors.critical : Colors.fg
         tooltip: `${root.muted ? "Muted" : root.vol + "%"}  ·  ${root.sink?.description || root.sink?.nickname || ""}`
         onClicked: button => {

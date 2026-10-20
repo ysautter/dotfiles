@@ -4,7 +4,7 @@ import QtQuick
 import qs.config
 import qs.components
 
-// Centre: the time (date in the tooltip). Click: dashboard.
+// Centre block: weekday | time | date. Click: dashboard.
 Row {
     id: root
 
@@ -18,10 +18,22 @@ Row {
     }
 
     BarModule {
+        text: Qt.formatDateTime(clock.date, "ddd")
+    }
+
+    BarModule {
         id: time
         text: Qt.formatDateTime(clock.date, "HH:mm")
+        clickable: true
+        onClicked: root.panelRequested("dashboard", time)
+    }
+
+    BarModule {
+        id: day
+        text: Qt.formatDateTime(clock.date, "dd.MM.yy")
         tooltip: Qt.formatDateTime(clock.date, "dddd, d. MMMM yyyy")
         clickable: true
         onClicked: root.panelRequested("dashboard", time)
     }
+
 }

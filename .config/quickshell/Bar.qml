@@ -139,6 +139,7 @@ PanelWindow {
             PresentationModule {}
             PrivacyModule {}
             Attention { visible: bar.primary; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
+            Glance { visible: bar.primary; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Tray { visible: bar.primary }
             StatusGroup { onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             NotifModule { shown: bar.primary }

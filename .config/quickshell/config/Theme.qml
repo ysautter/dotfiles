@@ -37,9 +37,11 @@ Singleton {
 
     // attention area: an item only appears when it needs you
     readonly property int attnUpdates: 1        // pending updates >= this
-    readonly property int attnClaude: 70        // Claude usage % >= this (or an error)
     readonly property int attnDisk: 85          // disk used % >= this
-    readonly property int attnCpu: 80           // CPU % averaged over the last 30 s
-    readonly property int attnMem: 85           // memory used % >= this
+    // glance items: always visible, warning colour from here on
+    readonly property var glance: ["claude", "cpu", "mem"]
+    readonly property int attnClaude: 70        // Claude usage %
+    readonly property int attnCpu: 80           // CPU % (30 s average)
+    readonly property int attnMem: 85           // memory used %
     readonly property var diskMounts: ["/", "/home", "/media/storage", "/media/data"]
 }
