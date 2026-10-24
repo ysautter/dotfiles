@@ -26,4 +26,5 @@ ShellRoot {
     Lock {}
     Screenshot {}
     Overview {}
+    Translate {}
 }

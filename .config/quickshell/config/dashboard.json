@@ -49,5 +49,15 @@
     "url": "https://mx.sautter.dev/dav/cal/",
     "calendar": "Tasks",
     "refreshMinutes": 5
+  },
+
+  "translate": {
+    "backend": "mymemory",
+    "backends": ["mymemory", "pi"],
+    "languages": ["de", "en", "fr", "es"],
+    "target": "de",
+    "fallbackTarget": "en",
+    "libretranslate": { "url": "" },
+    "pi": { "model": "anthropic/claude-haiku-4-5" }
   }
 }

@@ -26,6 +26,7 @@ features: `qs ipc show`.
 | `SUPER+CTRL+P` | presentation mode (DND + no idle lock) |
 | `SUPER+ALT+CTRL+L` | lock (falls back to hyprlock) |
 | `SUPER+B` | keyboard navigation of the bar (vi keys, see below) |
+| `SUPER+T` / `SUPER+SHIFT+T` | translate / translate the selection (Ctrl+L target, Ctrl+B backend, Ctrl+S swap, Ctrl+Enter copy) |
 
 ## Bar ("calm bar")
 
@@ -71,6 +72,7 @@ only the Python standard library (`/usr/bin/python3`).
 | Crypto from Kraken | Private `Balance` API (key with only *Query Funds*), cached 15 min; coins (incl. staked/earn, e.g. `DOT.S`, `ETH.F`) become holdings priced via Kraken's public OHLC API, fiat becomes cash, dust below `minValue` (1 €) hidden; check with `markets.py kraken` | private: `kraken.apiKey` + `apiSecret` or `apiSecretCommand`, optional `cost {COIN: amount}`, `names`, `ignore[]`, `minValue`, `refreshMinutes` |
 | Cash from Actual Budget | `scripts/actual.mjs` (`@actual-app/api` in `~/.local/share/quickshell/actual`, `npm install @actual-app/api@<server version>`); balances as of the server's last bank sync, cached 30 min; list accounts with `markets.py actual` | `actual.url/budget`, private: `actual.password` (+ `encryptionPassword`) |
 | Tasks | CalDAV VTODO, `scripts/caldav-tasks.py` (list, complete, undo, add) | `tasks.url/calendar`, private: `tasks.username` + `password` or `passwordCommand` |
+| Translate | `scripts/translate.py`: MyMemory (no key), pi (LLM), LibreTranslate (self-hosted), DeepL (key) | `translate.*` |
 
 Quick-add syntax for tasks: `Steuer @fri !` (`@today @tomorrow @mon..@sun
 @+3 @2026-11-03`, `!` = high priority). Completing a recurring task moves its
@@ -114,7 +116,7 @@ panels/          panels that slide out of the bar
 overlays/        launcher, power menu, lock, OSD, overview, screenshot, ...
 components/      shared widgets
 data/emoji.tsv   emoji names (generated from Unicode emoji-data)
-scripts/         wall-thumbs.sh, dashboard data (news, markets, CalDAV tasks)
+scripts/         wall-thumbs.sh, dashboard data (news, markets, CalDAV tasks, translate)
 ```
 
 ## Going back

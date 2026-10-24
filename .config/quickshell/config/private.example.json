@@ -35,5 +35,11 @@
     "password": "Actual server password",
     "budget": "budget name (only needed with several budgets)",
     "encryptionPassword": "only if end-to-end encryption is on"
+  },
+
+  "translate": {
+    "email": "optional - raises the MyMemory daily quota",
+    "deepl": { "apiKey": "optional, free keys end in :fx" },
+    "libretranslate": { "url": "http://192.168.178.20:5000", "apiKey": "" }
   }
 }
