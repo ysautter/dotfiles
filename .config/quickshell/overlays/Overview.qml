@@ -24,8 +24,8 @@ PanelWindow {
     readonly property real tileScale: {
         const mw = monitor?.width ?? 1920, mh = monitor?.height ?? 1080;
         const rows = Math.ceil(workspaces.length / columns);
-        const byW = (width - 120 - (columns - 1) * 18) / columns / mw;
-        const byH = (height - 160 - (rows - 1) * 40) / rows / mh;
+        const byW = (width - 120 - (columns - 1) * Theme.s(18)) / columns / mw;
+        const byH = (height - 160 - (rows - 1) * Theme.s(40)) / rows / mh;
         return Math.min(0.22, byW, byH);
     }
     readonly property real tileW: (monitor?.width ?? 1920) * tileScale
@@ -110,7 +110,7 @@ PanelWindow {
         id: grid
         anchors.centerIn: parent
         columns: root.columns
-        spacing: 18
+        spacing: Theme.s(18)
 
         Repeater {
             id: tiles
@@ -126,7 +126,7 @@ PanelWindow {
                 readonly property bool dropTarget: root.dragWin !== null && root.tileIndexAt(root.dragPos.x, root.dragPos.y) === index
 
                 width: root.tileW
-                height: root.tileH + 22
+                height: root.tileH + Theme.s(22)
 
                 // staggered pop-in
                 opacity: 0
@@ -144,7 +144,7 @@ PanelWindow {
 
                 Rectangle {
                     id: screenBox
-                    y: 22
+                    y: Theme.s(22)
                     width: root.tileW
                     height: root.tileH
                     color: Qt.alpha(Colors.background, 0.85)
@@ -238,14 +238,14 @@ PanelWindow {
         visible: root.dragWin !== null
         x: root.dragPos.x - width / 2
         y: root.dragPos.y - height / 2
-        width: 120
-        height: 70
+        width: Theme.s(120)
+        height: Theme.s(70)
         color: Qt.alpha(Colors.background, 0.9)
         border.width: 2
         border.color: Colors.fg
         Text {
             anchors.centerIn: parent
-            width: parent.width - 12
+            width: parent.width - Theme.s(12)
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
             text: root.dragWin?.lastIpcObject?.class ?? ""
@@ -258,7 +258,7 @@ PanelWindow {
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 30
+        anchors.bottomMargin: Theme.s(30)
         opacity: root.open ? 0.7 : 0
         text: "click: focus · drag: move window · arrows + Enter / 1-9: go · Esc: close"
         color: Colors.fg

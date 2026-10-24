@@ -17,8 +17,8 @@ Rectangle {
     readonly property bool navigable: available
     function navActivate() { if (available) clicked(); }
 
-    implicitWidth: row.implicitWidth + 16
-    implicitHeight: 26
+    implicitWidth: row.implicitWidth + Theme.s(16)
+    implicitHeight: Theme.s(26)
     opacity: available ? 1 : 0.4
     color: active ? Colors.active
          : mouse.containsMouse && available ? Qt.alpha(Colors.hover, 0.45)
@@ -28,7 +28,7 @@ Rectangle {
     Row {
         id: row
         anchors.centerIn: parent
-        spacing: 6
+        spacing: Theme.s(6)
         Text {
             visible: root.icon !== ""
             anchors.verticalCenter: parent.verticalCenter

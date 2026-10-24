@@ -34,8 +34,8 @@ Overlay {
     readonly property string effTarget: srcLang !== "" && srcLang === tgt ? fallbackTarget : tgt
     readonly property bool manual: backend === "pi"    // slow: translate on Enter only
 
-    boxWidth: 760
-    boxHeight: 420
+    boxWidth: Theme.s(760)
+    boxHeight: Theme.s(420)
     onCloseRequested: hide()
 
     function show(text, now) {
@@ -173,23 +173,23 @@ Overlay {
     // ---- UI -------------------------------------------------------------------------
     Item {
         anchors.fill: parent
-        anchors.margins: 14
+        anchors.margins: Theme.s(14)
 
         // top row
         Item {
             id: top
             width: parent.width
-            height: 26
+            height: Theme.s(26)
 
             Row {
-                spacing: 4
+                spacing: Theme.s(4)
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "\u{f05ca}"
                     color: Colors.fg
                     font.family: Theme.iconFont
-                    font.pixelSize: 16
-                    rightPadding: 6
+                    font.pixelSize: Theme.s(16)
+                    rightPadding: Theme.s(6)
                 }
                 Repeater {
                     model: ["auto", ...root.languages]
@@ -226,15 +226,15 @@ Overlay {
         // panes
         Row {
             anchors.top: top.bottom
-            anchors.topMargin: 10
+            anchors.topMargin: Theme.s(10)
             anchors.bottom: hint.top
-            anchors.bottomMargin: 8
+            anchors.bottomMargin: Theme.s(8)
             width: parent.width
-            spacing: 10
+            spacing: Theme.s(10)
 
             // input
             Rectangle {
-                width: (parent.width - 10) / 2
+                width: (parent.width - Theme.s(10)) / 2
                 height: parent.height
                 color: Qt.alpha(Colors.fg, 0.06)
                 border.width: 1
@@ -243,7 +243,7 @@ Overlay {
                 Flickable {
                     id: inFlick
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: Theme.s(10)
                     clip: true
                     contentWidth: width
                     contentHeight: input.implicitHeight
@@ -294,7 +294,7 @@ Overlay {
 
             // result
             Rectangle {
-                width: (parent.width - 10) / 2
+                width: (parent.width - Theme.s(10)) / 2
                 height: parent.height
                 color: Qt.alpha(Colors.fg, 0.03)
                 border.width: 1
@@ -303,7 +303,7 @@ Overlay {
                 Flickable {
                     id: outFlick
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: Theme.s(10)
                     clip: true
                     contentWidth: width
                     contentHeight: output.implicitHeight
@@ -327,7 +327,7 @@ Overlay {
                 Text {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    anchors.margins: 8
+                    anchors.margins: Theme.s(8)
                     visible: root.busy
                     text: "translating…"
                     color: Qt.alpha(Colors.fg, 0.6)

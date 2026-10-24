@@ -50,7 +50,7 @@ Item {
     Row {
         id: content
         anchors.centerIn: parent
-        spacing: 7
+        spacing: Theme.s(7)
         opacity: root.shown ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Theme.animMed } }
 

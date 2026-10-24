@@ -7,9 +7,9 @@ import qs.services
 Column {
     id: root
     width: parent.width
-    spacing: 8
+    spacing: Theme.s(8)
 
-    property int maxListHeight: 320
+    property int maxListHeight: Theme.s(320)
 
     Text {
         text: Updates.count > 0 ? `\uf487  ${Updates.count} update${Updates.count === 1 ? "" : "s"} available` : "System is up to date"
@@ -28,10 +28,10 @@ Column {
             required property var modelData
             required property int index
             width: ListView.view.width
-            height: 22
+            height: Theme.s(22)
             Rectangle { anchors.fill: parent; color: index % 2 ? Qt.alpha(Colors.fg, 0.04) : "transparent" }
             Text {
-                x: 6
+                x: Theme.s(6)
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width * 0.45
                 elide: Text.ElideRight
@@ -42,7 +42,7 @@ Column {
             }
             Text {
                 anchors.right: parent.right
-                anchors.rightMargin: 6
+                anchors.rightMargin: Theme.s(6)
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width * 0.53
                 horizontalAlignment: Text.AlignRight
@@ -56,8 +56,8 @@ Column {
     }
 
     Row {
-        spacing: 6
-        topPadding: 4
+        spacing: Theme.s(6)
+        topPadding: Theme.s(4)
         PanelButton {
             icon: "\uf019"
             text: Updates.updating ? "Updating…" : "Update now"

@@ -21,10 +21,10 @@ PanelWindow {
 
     anchors.top: true
     anchors.right: true
-    margins.top: 6
+    margins.top: Theme.s(6)
     margins.right: Theme.marginRight
-    implicitWidth: 380
-    implicitHeight: Math.max(1, list.contentHeight + 8)
+    implicitWidth: Theme.s(380)
+    implicitHeight: Math.max(1, list.contentHeight + Theme.s(8))
     exclusiveZone: 0
     color: "transparent"
 
@@ -34,7 +34,7 @@ PanelWindow {
     ListView {
         id: list
         anchors.fill: parent
-        spacing: 8
+        spacing: Theme.s(8)
         interactive: false
         model: ScriptModel { values: Notifs.popups }
 

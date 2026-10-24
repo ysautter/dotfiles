@@ -11,8 +11,8 @@ PanelWindow {
     id: root
 
     property bool open: false
-    property int boxWidth: 640
-    property int boxHeight: 480
+    property int boxWidth: Theme.s(640)
+    property int boxHeight: Theme.s(480)
     property real dim: 0.35
     default property alias content: box.data
     readonly property alias box: box
@@ -56,6 +56,6 @@ PanelWindow {
         // swallow clicks so they don't reach the backdrop
         MouseArea { anchors.fill: parent; z: -1 }
 
-        Rectangle { width: parent.width; height: 2; color: Colors.fg; opacity: 0.6; z: 5 }
+        Rectangle { width: parent.width; height: Theme.s(2); color: Colors.fg; opacity: 0.6; z: 5 }
     }
 }

@@ -114,7 +114,7 @@ PanelWindow {
         Rectangle { x: parent.s.x + parent.s.width; y: parent.s.y; width: parent.width - x; height: parent.s.height; color: parent.shade }
         Rectangle {
             visible: root.hasSel
-            x: parent.s.x - 1; y: parent.s.y - 1; width: parent.s.width + 2; height: parent.s.height + 2
+            x: parent.s.x - 1; y: parent.s.y - 1; width: parent.s.width + Theme.s(2); height: parent.s.height + Theme.s(2)
             color: "transparent"
             border.width: 2
             border.color: Colors.fg
@@ -139,10 +139,10 @@ PanelWindow {
     // size label
     Rectangle {
         visible: root.hasSel
-        x: Math.min(root.sel.x, root.width - width - 4)
-        y: root.sel.y > 30 ? root.sel.y - 26 : root.sel.y + root.sel.height + 4
-        width: sizeText.implicitWidth + 12
-        height: 22
+        x: Math.min(root.sel.x, root.width - width - Theme.s(4))
+        y: root.sel.y > Theme.s(30) ? root.sel.y - Theme.s(26) : root.sel.y + root.sel.height + Theme.s(4)
+        width: sizeText.implicitWidth + Theme.s(12)
+        height: Theme.s(22)
         color: Qt.alpha(Colors.background, 0.9)
         Text {
             id: sizeText
@@ -185,21 +185,21 @@ PanelWindow {
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 40
-        width: bar.implicitWidth + 16
-        height: 40
+        anchors.bottomMargin: Theme.s(40)
+        width: bar.implicitWidth + Theme.s(16)
+        height: Theme.s(40)
         color: Qt.alpha(Colors.background, 0.92)
         border.width: 1
         border.color: Qt.alpha(Colors.fg, 0.35)
         Row {
             id: bar
             anchors.centerIn: parent
-            spacing: 6
+            spacing: Theme.s(6)
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.hasSel ? "" : "drag to select · click a window"
                 visible: text !== ""
-                rightPadding: 6
+                rightPadding: Theme.s(6)
                 color: Qt.alpha(Colors.fg, 0.6)
                 font.family: Theme.font
                 font.pixelSize: Theme.fontSize - 1

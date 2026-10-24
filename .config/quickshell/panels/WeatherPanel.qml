@@ -7,7 +7,7 @@ import qs.services
 Column {
     id: root
     width: parent.width
-    spacing: 8
+    spacing: Theme.s(8)
 
     readonly property var strip: Weather.hourly.filter((h, i) => i % 3 === 2).slice(0, 8)
     readonly property real weekMin: Weather.daily.length ? Math.min(...Weather.daily.map(d => d.min)) : 0
@@ -30,13 +30,13 @@ Column {
     // current
     Row {
         visible: Weather.valid
-        spacing: 12
+        spacing: Theme.s(12)
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: Weather.icon
             color: Colors.fg
             font.family: Theme.iconFont
-            font.pixelSize: 40
+            font.pixelSize: Theme.s(40)
         }
         Column {
             anchors.verticalCenter: parent.verticalCenter
@@ -45,7 +45,7 @@ Column {
                 text: root.deg(Weather.temp)
                 color: Colors.fg
                 font.family: Theme.font
-                font.pixelSize: 28
+                font.pixelSize: Theme.s(28)
             }
             Text {
                 text: Weather.desc + " · feels " + root.deg(Weather.feels)
@@ -58,7 +58,7 @@ Column {
 
     Row {
         visible: Weather.valid
-        spacing: 14
+        spacing: Theme.s(14)
         Text {
             text: "\u{f058e} " + Weather.humidity + "%"
             color: Colors.fg
@@ -74,7 +74,7 @@ Column {
     }
     Row {
         visible: Weather.valid && Weather.daily.length > 0
-        spacing: 14
+        spacing: Theme.s(14)
         Text {
             text: "\u{f059c} " + (Weather.daily.length ? Qt.formatTime(Weather.daily[0].sunrise, "HH:mm") : "")
             color: Colors.fg
@@ -111,7 +111,7 @@ Column {
                     text: Weather.iconFor(modelData.code, modelData.isDay)
                     color: Colors.fg
                     font.family: Theme.iconFont
-                    font.pixelSize: 16
+                    font.pixelSize: Theme.s(16)
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -143,7 +143,7 @@ Column {
                 required property var modelData
                 required property int index
                 width: root.width
-                height: 24
+                height: Theme.s(24)
 
                 Text {
                     x: 0
@@ -154,15 +154,15 @@ Column {
                     font.pixelSize: Theme.fontSize - 1
                 }
                 Text {
-                    x: 52
+                    x: Theme.s(52)
                     anchors.verticalCenter: parent.verticalCenter
                     text: Weather.iconFor(day.modelData.code, true)
                     color: Colors.fg
                     font.family: Theme.iconFont
-                    font.pixelSize: 15
+                    font.pixelSize: Theme.s(15)
                 }
                 Text {
-                    x: 80
+                    x: Theme.s(80)
                     anchors.verticalCenter: parent.verticalCenter
                     visible: day.modelData.pop >= 20
                     text: "\u{f054a}" + day.modelData.pop + "%"
@@ -172,8 +172,8 @@ Column {
                 }
                 // min  [range bar]  max
                 Text {
-                    x: 128
-                    width: 28
+                    x: Theme.s(128)
+                    width: Theme.s(28)
                     anchors.verticalCenter: parent.verticalCenter
                     horizontalAlignment: Text.AlignRight
                     text: root.deg(day.modelData.min)
@@ -183,15 +183,15 @@ Column {
                 }
                 Item {
                     id: track
-                    x: 162
-                    width: root.width - 162 - 32
-                    height: 4
+                    x: Theme.s(162)
+                    width: root.width - Theme.s(162) - Theme.s(32)
+                    height: Theme.s(4)
                     anchors.verticalCenter: parent.verticalCenter
                     readonly property real span: Math.max(1, root.weekMax - root.weekMin)
                     Rectangle { anchors.fill: parent; color: Qt.alpha(Colors.fg, 0.1) }
                     Rectangle {
                         x: (day.modelData.min - root.weekMin) / track.span * track.width
-                        width: Math.max(3, (day.modelData.max - day.modelData.min) / track.span * track.width)
+                        width: Math.max(Theme.s(3), (day.modelData.max - day.modelData.min) / track.span * track.width)
                         height: parent.height
                         color: Colors.accent
                     }
@@ -221,7 +221,7 @@ Column {
     // footer
     Item {
         width: parent.width
-        height: 26
+        height: Theme.s(26)
         Text {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter

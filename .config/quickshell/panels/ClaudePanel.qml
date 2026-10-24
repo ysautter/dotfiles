@@ -7,7 +7,7 @@ import qs.services
 Column {
     id: root
     width: parent.width
-    spacing: 10
+    spacing: Theme.s(10)
 
     component UsageBar: Column {
         id: ub
@@ -15,12 +15,12 @@ Column {
         property real pct: -1
         property string reset
         width: root.width
-        spacing: 4
+        spacing: Theme.s(4)
         readonly property color tint: pct >= 100 ? Colors.critical : pct >= 80 ? Colors.warning : Colors.fg
 
         Item {
             width: parent.width
-            height: 18
+            height: Theme.s(18)
             Text {
                 text: ub.title
                 color: Colors.fg
@@ -38,7 +38,7 @@ Column {
         }
         Rectangle {
             width: parent.width
-            height: 8
+            height: Theme.s(8)
             color: Qt.alpha(Colors.fg, 0.12)
             Rectangle {
                 height: parent.height
@@ -77,7 +77,7 @@ Column {
 
     Item {
         width: root.width
-        height: 26
+        height: Theme.s(26)
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: ClaudeUsage.busy ? "updating…" : "updated " + Qt.formatTime(ClaudeUsage.updated, "HH:mm")

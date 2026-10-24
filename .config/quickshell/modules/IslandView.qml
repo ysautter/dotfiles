@@ -11,7 +11,7 @@ Item {
     default property alias normal: normalRow.data
 
     implicitHeight: Theme.barHeight
-    implicitWidth: Island.active ? eventRow.implicitWidth + 28 : normalRow.implicitWidth
+    implicitWidth: Island.active ? eventRow.implicitWidth + Theme.s(28) : normalRow.implicitWidth
     clip: true
     Behavior on implicitWidth { NumberAnimation { duration: Theme.animSlow; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
 
@@ -41,7 +41,7 @@ Item {
         id: eventRow
         anchors.horizontalCenter: parent.horizontalCenter
         height: parent.height
-        spacing: 8
+        spacing: Theme.s(8)
         y: Island.active ? 0 : Theme.barHeight
         opacity: Island.active ? 1 : 0
         Behavior on y { NumberAnimation { duration: Theme.animMed; easing.type: Easing.OutCubic } }
@@ -50,11 +50,11 @@ Item {
         Image {
             visible: (root.shownEvent?.image ?? "") !== "" && status === Image.Ready
             anchors.verticalCenter: parent.verticalCenter
-            width: 20
-            height: 20
+            width: Theme.s(20)
+            height: Theme.s(20)
             source: root.shownEvent?.image ?? ""
-            sourceSize.width: 40
-            sourceSize.height: 40
+            sourceSize.width: Theme.s(40)
+            sourceSize.height: Theme.s(40)
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
         }
@@ -68,7 +68,7 @@ Item {
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: root.shownEvent?.text ?? ""
-            width: Math.min(implicitWidth, 520)
+            width: Math.min(implicitWidth, Theme.s(520))
             elide: Text.ElideRight
             textFormat: Text.PlainText
             color: root.tint
@@ -81,7 +81,7 @@ Item {
     Rectangle {
         visible: Island.active
         anchors.bottom: parent.bottom
-        height: 2
+        height: Theme.s(2)
         color: root.tint
         opacity: 0.6
         width: 0

@@ -22,8 +22,8 @@ Overlay {
         { id: "poweroff", key: "p", label: "Shut down", glyph: "\uf011", confirm: true,  run: () => Session.poweroff() }
     ]
 
-    boxWidth: actions.length * 120 + 24
-    boxHeight: 190
+    boxWidth: actions.length * (Theme.s(112) + Theme.s(8)) + Theme.s(24)
+    boxHeight: Theme.s(190)
     dim: 0.5
     onCloseRequested: open = false
     onOpenChanged: if (open) { confirm = ""; current = 0; keys.forceActiveFocus(); }
@@ -59,7 +59,7 @@ Overlay {
 
         Row {
             anchors.centerIn: parent
-            spacing: 8
+            spacing: Theme.s(8)
             Repeater {
                 model: root.actions
                 Rectangle {
@@ -68,8 +68,8 @@ Overlay {
                     required property int index
                     readonly property bool selected: root.current === index
                     readonly property bool confirming: root.confirm === modelData.id
-                    width: 112
-                    height: 130
+                    width: Theme.s(112)
+                    height: Theme.s(130)
                     color: confirming ? Qt.alpha(Colors.critical, 0.35) : selected ? Colors.active
                          : m.containsMouse ? Qt.alpha(Colors.hover, 0.35) : Qt.alpha(Colors.fg, 0.05)
                     border.width: selected ? 1 : 0
@@ -84,17 +84,17 @@ Overlay {
 
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        y: 30
+                        y: Theme.s(30)
                         text: btn.modelData.glyph
                         color: btn.confirming ? Colors.critical : Colors.fg
                         font.family: Theme.iconFont
-                        font.pixelSize: 32
+                        font.pixelSize: Theme.s(32)
                         scale: btn.selected ? 1.12 : 1
                         Behavior on scale { NumberAnimation { duration: Theme.animMed; easing.type: Easing.OutBack } }
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        y: 84
+                        y: Theme.s(84)
                         text: btn.confirming ? "Again to confirm" : btn.modelData.label
                         textFormat: Text.PlainText
                         color: btn.confirming ? Colors.critical : Colors.fg
@@ -103,7 +103,7 @@ Overlay {
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        y: 104
+                        y: Theme.s(104)
                         text: "[" + btn.modelData.key + "]"
                         color: Qt.alpha(Colors.fg, 0.4)
                         font.family: Theme.font

@@ -11,7 +11,7 @@ PopupWindow {
     readonly property bool open: bar.panel === name
     property Item anchorItem: null
     onOpenChanged: if (open) anchorItem = bar.panelAnchor
-    property int panelWidth: 360
+    property int panelWidth: Theme.s(360)
     default property alias content: inner.data
 
     readonly property real contentHeight: inner.childrenRect.height
@@ -20,10 +20,10 @@ PopupWindow {
     anchor.edges: Edges.Bottom
     anchor.gravity: Edges.Bottom
     anchor.adjustment: PopupAdjustment.Slide
-    anchor.margins.top: 4
+    anchor.margins.top: Theme.s(4)
 
     implicitWidth: panelWidth
-    implicitHeight: Math.max(1, contentHeight + 24)
+    implicitHeight: Math.max(1, contentHeight + Theme.s(24))
     color: "transparent"
     visible: open || frame.progress > 0.001
 
@@ -42,9 +42,9 @@ PopupWindow {
 
         Item {
             id: inner
-            x: 12
-            y: 12 - (1 - frame.progress) * 20
-            width: parent.width - 24
+            x: Theme.s(12)
+            y: Theme.s(12) - (1 - frame.progress) * Theme.s(20)
+            width: parent.width - Theme.s(24)
             height: root.contentHeight
         }
 
@@ -74,7 +74,7 @@ PopupWindow {
         // accent line on top, like the bar's underline
         Rectangle {
             width: parent.width
-            height: 2
+            height: Theme.s(2)
             color: Colors.fg
             opacity: 0.6
         }

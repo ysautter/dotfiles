@@ -11,7 +11,7 @@ Item {
     implicitHeight: Math.max(left.implicitHeight, right.implicitHeight) + 0
     height: implicitHeight
 
-    readonly property int maxHeight: 520
+    readonly property int maxHeight: Theme.s(520)
     function tone(v) { return v > 0 ? Colors.good : v < 0 ? Colors.critical : Colors.fg; }
     // symbol: Yahoo ticker, ISIN or WKN; cash from Actual Budget or a fixed amount
     readonly property string snippet: '{"markets": {"holdings": [{"symbol": "A2PKXG", "quantity": 10, "cost": 1000}], "cash": [{"name": "Tagesgeld", "actual": "Tagesgeld"}]}}'
@@ -26,23 +26,23 @@ Item {
     Column {
         id: left
         x: 0
-        width: root.width * 0.55 - 12
-        spacing: 8
+        width: root.width * 0.55 - Theme.s(12)
+        spacing: Theme.s(8)
 
         SectionHeader { text: "Portfolio" }
 
         Column {
             visible: Markets.hasPortfolio
             width: parent.width
-            spacing: 8
+            spacing: Theme.s(8)
 
             Column {
-                spacing: 2
+                spacing: Theme.s(2)
                 Text {
                     text: Markets.money(Markets.total, Markets.base, 0)
                     color: Colors.fg
                     font.family: Theme.font
-                    font.pixelSize: 26
+                    font.pixelSize: Theme.s(26)
                 }
                 Text {
                     text: `${Markets.dayChange > 0 ? "+" : ""}${Markets.money(Markets.dayChange)}  ${Markets.pct(Markets.dayPct)}  today`
@@ -62,17 +62,17 @@ Item {
             // header
             Item {
                 width: parent.width
-                height: 18
-                Dim { x: 6; text: "Name" }
+                height: Theme.s(18)
+                Dim { x: Theme.s(6); text: "Name" }
                 Dim { x: parent.width * 0.42; width: parent.width * 0.12; horizontalAlignment: Text.AlignRight; text: "Qty" }
                 Dim { x: parent.width * 0.55; width: parent.width * 0.17; horizontalAlignment: Text.AlignRight; text: "Value" }
                 Dim { x: parent.width * 0.73; width: parent.width * 0.13; horizontalAlignment: Text.AlignRight; text: "Day" }
-                Dim { x: parent.width * 0.87; width: parent.width * 0.13 - 6; horizontalAlignment: Text.AlignRight; text: "Gain" }
+                Dim { x: parent.width * 0.87; width: parent.width * 0.13 - Theme.s(6); horizontalAlignment: Text.AlignRight; text: "Gain" }
             }
 
             Flickable {
                 width: parent.width
-                height: Math.min(contentHeight, 300)
+                height: Math.min(contentHeight, Theme.s(300))
                 contentHeight: holdCol.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -88,10 +88,10 @@ Item {
                             readonly property bool navigable: true
                             function navActivate() { Quickshell.execDetached(["xdg-open", modelData.url]); }
                             width: holdCol.width
-                            height: 26
+                            height: Theme.s(26)
                             color: hm.containsMouse ? Qt.alpha(Colors.hover, 0.35) : index % 2 ? Qt.alpha(Colors.fg, 0.04) : "transparent"
                             Text {
-                                x: 6; width: parent.width * 0.42 - 10
+                                x: Theme.s(6); width: parent.width * 0.42 - Theme.s(10)
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: h.modelData.name + (h.modelData.source === "kraken" ? "  · Kraken" : ""); elide: Text.ElideRight
                                 color: Colors.fg; font.family: Theme.font; font.pixelSize: Theme.fontSize - 1
@@ -118,7 +118,7 @@ Item {
                                 color: root.tone(h.modelData.dayPct); font.family: Theme.font; font.pixelSize: Theme.fontSize - 2
                             }
                             Text {
-                                x: parent.width * 0.87; width: parent.width * 0.13 - 6
+                                x: parent.width * 0.87; width: parent.width * 0.13 - Theme.s(6)
                                 anchors.verticalCenter: parent.verticalCenter
                                 horizontalAlignment: Text.AlignRight
                                 text: isNaN(h.modelData.gainPct) ? "–" : Markets.pct(h.modelData.gainPct)
@@ -146,9 +146,9 @@ Item {
                     delegate: Item {
                         required property var modelData
                         width: parent.width
-                        height: 24
+                        height: Theme.s(24)
                         Text {
-                            x: 6; width: parent.width * 0.55
+                            x: Theme.s(6); width: parent.width * 0.55
                             anchors.verticalCenter: parent.verticalCenter
                             text: modelData.name + (modelData.source === "actual" ? "  · Actual" : ""); elide: Text.ElideRight
                             color: Qt.alpha(Colors.fg, 0.7); font.family: Theme.font; font.pixelSize: Theme.fontSize - 1
@@ -168,7 +168,7 @@ Item {
         Column {
             visible: !Markets.hasPortfolio
             width: parent.width
-            spacing: 8
+            spacing: Theme.s(8)
             Text {
                 width: parent.width
                 wrapMode: Text.Wrap
@@ -179,12 +179,12 @@ Item {
             }
             Rectangle {
                 width: parent.width
-                height: snip.implicitHeight + 16
+                height: snip.implicitHeight + Theme.s(16)
                 color: Qt.alpha(Colors.fg, 0.07)
                 TextEdit {
                     id: snip
-                    x: 8; y: 8
-                    width: parent.width - 16
+                    x: Theme.s(8); y: Theme.s(8)
+                    width: parent.width - Theme.s(16)
                     readOnly: true
                     selectByMouse: true
                     wrapMode: TextEdit.Wrap
@@ -201,9 +201,9 @@ Item {
     // ---- right: watchlist ----
     Column {
         id: right
-        x: root.width * 0.55 + 12
-        width: root.width * 0.45 - 12
-        spacing: 8
+        x: root.width * 0.55 + Theme.s(12)
+        width: root.width * 0.45 - Theme.s(12)
+        spacing: Theme.s(8)
 
         SectionHeader { text: "Watchlist" }
 
@@ -214,7 +214,7 @@ Item {
 
         Flickable {
             width: parent.width
-            height: Math.min(contentHeight, root.maxHeight - 90)
+            height: Math.min(contentHeight, root.maxHeight - Theme.s(90))
             contentHeight: wlCol.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -232,17 +232,17 @@ Item {
                         readonly property var spark: modelData.spark ?? []
                         readonly property bool up: spark.length > 1 ? spark[spark.length - 1] >= spark[0] : modelData.changePct >= 0
                         width: wlCol.width
-                        height: 28
+                        height: Theme.s(28)
                         color: wm.containsMouse ? Qt.alpha(Colors.hover, 0.35) : index % 2 ? Qt.alpha(Colors.fg, 0.04) : "transparent"
                         Text {
-                            x: 6; width: parent.width * 0.32
+                            x: Theme.s(6); width: parent.width * 0.32
                             anchors.verticalCenter: parent.verticalCenter
                             text: w.modelData.name; elide: Text.ElideRight
                             color: Colors.fg; font.family: Theme.font; font.pixelSize: Theme.fontSize - 1
                         }
                         Canvas {
                             id: cv
-                            x: parent.width * 0.35; width: 80; height: 22
+                            x: parent.width * 0.35; width: Theme.s(80); height: Theme.s(22)
                             anchors.verticalCenter: parent.verticalCenter
                             property color lineColor: w.up ? Colors.good : Colors.critical
                             onLineColorChanged: requestPaint()
@@ -265,7 +265,7 @@ Item {
                             }
                         }
                         Text {
-                            x: parent.width * 0.35 + 88; width: parent.width * 0.65 - 88 - 70
+                            x: parent.width * 0.35 + Theme.s(88); width: parent.width * 0.65 - Theme.s(88) - Theme.s(70)
                             anchors.verticalCenter: parent.verticalCenter
                             horizontalAlignment: Text.AlignRight
                             elide: Text.ElideLeft
@@ -273,8 +273,8 @@ Item {
                             color: Colors.fg; font.family: Theme.font; font.pixelSize: Theme.fontSize - 2
                         }
                         Text {
-                            anchors.right: parent.right; anchors.rightMargin: 6
-                            width: 64
+                            anchors.right: parent.right; anchors.rightMargin: Theme.s(6)
+                            width: Theme.s(64)
                             anchors.verticalCenter: parent.verticalCenter
                             horizontalAlignment: Text.AlignRight
                             text: Markets.pct(w.modelData.changePct)
@@ -296,7 +296,7 @@ Item {
         // footer
         Item {
             width: parent.width
-            height: 26
+            height: Theme.s(26)
             Dim {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Markets.busy ? "updating…" : Markets.updated.getTime() > 0 ? "updated " + Qt.formatTime(Markets.updated, "HH:mm") : ""

@@ -10,7 +10,7 @@ Canvas {
     property int capacity: 60
     property color lineColor: Colors.fg
 
-    implicitHeight: 60
+    implicitHeight: Theme.s(60)
     onValuesChanged: requestPaint()
     onLineColorChanged: requestPaint()
 

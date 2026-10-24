@@ -7,12 +7,12 @@ import qs.services
 Column {
     id: root
     width: parent.width
-    spacing: 8
+    spacing: Theme.s(8)
 
     property bool active: false
     property bool bySource: false
     property var hidden: ({})          // feed name -> true when filtered out
-    property int maxHeight: 500
+    property int maxHeight: Theme.s(500)
     // items at least this new were unread when the tab opened (kept while visible)
     property real newSince: Infinity
 
@@ -51,12 +51,12 @@ Column {
     // ---- toolbar ----
     Item {
         width: root.width
-        height: 26
+        height: Theme.s(26)
         Row {
-            spacing: 6
+            spacing: Theme.s(6)
             PanelButton { text: "Latest"; active: !root.bySource; onClicked: root.bySource = false }
             PanelButton { text: "By source"; active: root.bySource; onClicked: root.bySource = true }
-            Item { width: 10; height: 1 }
+            Item { width: Theme.s(10); height: 1 }
             Repeater {
                 model: News.feeds
                 PanelButton {
@@ -74,7 +74,7 @@ Column {
         }
         Row {
             anchors.right: parent.right
-            spacing: 8
+            spacing: Theme.s(8)
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: News.busy ? "updating…" : News.updated.getTime() > 0 ? "updated " + Qt.formatTime(News.updated, "HH:mm") : ""
@@ -117,19 +117,19 @@ Column {
                     function navActivate() { News.open(modelData.link); }
                     readonly property bool isNew: modelData.time >= root.newSince
                     width: latestCol.width
-                    height: 26
+                    height: Theme.s(26)
                     color: rowMouse.containsMouse ? Qt.alpha(Colors.hover, 0.35)
                          : index % 2 ? Qt.alpha(Colors.fg, 0.04) : "transparent"
                     Rectangle {
-                        x: 6; width: 6; height: 6
+                        x: Theme.s(6); width: Theme.s(6); height: Theme.s(6)
                         anchors.verticalCenter: parent.verticalCenter
-                        radius: 3
+                        radius: Theme.s(3)
                         color: Colors.accent
                         visible: row.isNew
                     }
                     Text {
-                        x: 18
-                        width: 110
+                        x: Theme.s(18)
+                        width: Theme.s(110)
                         anchors.verticalCenter: parent.verticalCenter
                         text: row.modelData.source
                         elide: Text.ElideRight
@@ -138,8 +138,8 @@ Column {
                         font.pixelSize: Theme.fontSize - 2
                     }
                     Text {
-                        x: 136
-                        width: parent.width - 136 - 70
+                        x: Theme.s(136)
+                        width: parent.width - Theme.s(136) - Theme.s(70)
                         anchors.verticalCenter: parent.verticalCenter
                         text: row.modelData.title
                         elide: Text.ElideRight
@@ -150,7 +150,7 @@ Column {
                     }
                     Text {
                         anchors.right: parent.right
-                        anchors.rightMargin: 8
+                        anchors.rightMargin: Theme.s(8)
                         anchors.verticalCenter: parent.verticalCenter
                         text: root.age(row.modelData.time)
                         color: Qt.alpha(Colors.fg, 0.5)
@@ -186,7 +186,7 @@ Column {
         Grid {
             id: grid
             columns: 3
-            spacing: 16
+            spacing: Theme.s(16)
             width: parent.width
             Repeater {
                 model: News.feeds.filter(f => !root.hidden[f.name])
@@ -194,7 +194,7 @@ Column {
                     id: col
                     required property var modelData
                     width: (grid.width - 2 * grid.spacing) / 3
-                    spacing: 2
+                    spacing: Theme.s(2)
                     SectionHeader { text: col.modelData.name }
                     Text {
                         visible: !!col.modelData.error
@@ -216,17 +216,17 @@ Column {
                             function navActivate() { News.open(modelData.link); }
                             readonly property bool isNew: modelData.time >= root.newSince
                             width: col.width
-                            height: t.implicitHeight + 8
+                            height: t.implicitHeight + Theme.s(8)
                             color: im.containsMouse ? Qt.alpha(Colors.hover, 0.35) : "transparent"
                             Rectangle {
-                                x: 2; y: 7; width: 6; height: 6; radius: 3
+                                x: Theme.s(2); y: Theme.s(7); width: Theme.s(6); height: Theme.s(6); radius: Theme.s(3)
                                 color: Colors.accent
                                 visible: item.isNew
                             }
                             Column {
-                                x: 14
-                                y: 4
-                                width: parent.width - 18
+                                x: Theme.s(14)
+                                y: Theme.s(4)
+                                width: parent.width - Theme.s(18)
                                 Text {
                                     id: t
                                     width: parent.width

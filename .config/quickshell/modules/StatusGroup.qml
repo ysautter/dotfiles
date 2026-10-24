@@ -16,8 +16,8 @@ Row {
     signal panelRequested(string name, Item anchor)
 
     height: Theme.barHeight
-    leftPadding: 4
-    rightPadding: 4
+    leftPadding: Theme.s(4)
+    rightPadding: Theme.s(4)
 
     // ---- state ------------------------------------------------------------------
     readonly property PwNode sink: Pipewire.defaultAudioSink
@@ -42,7 +42,7 @@ Row {
     }
 
     component Icon: BarModule {
-        hpadding: 6
+        hpadding: Theme.s(6)
         clickable: true
         onScrolled: delta => root.scroll(delta)
     }

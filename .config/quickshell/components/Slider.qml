@@ -17,8 +17,8 @@ Item {
     function navActivate() {}
     function navAdjust(dir) { moved(Math.max(0, Math.min(to, value + dir * step))); }
 
-    implicitHeight: 18
-    implicitWidth: 200
+    implicitHeight: Theme.s(18)
+    implicitWidth: Theme.s(200)
 
     function setFromX(x) {
         const v = Math.max(0, Math.min(1, x / width)) * to;
@@ -29,7 +29,7 @@ Item {
         id: track
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width
-        height: mouse.containsMouse || root.dragging ? 8 : 6
+        height: mouse.containsMouse || root.dragging ? Theme.s(8) : Theme.s(6)
         color: Qt.alpha(Colors.fg, 0.15)
         Behavior on height { NumberAnimation { duration: Theme.animFast } }
 

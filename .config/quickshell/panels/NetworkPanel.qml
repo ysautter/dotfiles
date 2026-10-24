@@ -8,7 +8,7 @@ import qs.services
 Column {
     id: root
     width: parent.width
-    spacing: 8
+    spacing: Theme.s(8)
 
     property bool active: false
     property string askPassword: ""          // ssid waiting for a password
@@ -17,7 +17,7 @@ Column {
 
     Item {
         width: root.width
-        height: 26
+        height: Theme.s(26)
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: Net.type === "wifi" ? `\uf1eb  ${Net.ssid}  ·  ${Net.signal}%`
@@ -30,7 +30,7 @@ Column {
         Row {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 8
+            spacing: Theme.s(8)
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Wi-Fi"
@@ -55,9 +55,9 @@ Column {
     ListView {
         id: list
         width: root.width
-        height: Math.min(contentHeight, 300)
+        height: Math.min(contentHeight, Theme.s(300))
         clip: true
-        spacing: 2
+        spacing: Theme.s(2)
         boundsBehavior: Flickable.StopAtBounds
         model: Net.wifiEnabled ? Net.networks : []
 
@@ -70,7 +70,7 @@ Column {
 
             Rectangle {
                 width: parent.width
-                height: 28
+                height: Theme.s(28)
                 color: row.modelData.active ? Colors.active
                      : m.containsMouse ? Qt.alpha(Colors.hover, 0.35) : "transparent"
                 Behavior on color { ColorAnimation { duration: Theme.animFast } }
@@ -78,23 +78,23 @@ Column {
                 // signal bars
                 Row {
                     id: bars
-                    x: 8
+                    x: Theme.s(8)
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
+                    spacing: Theme.s(2)
                     Repeater {
                         model: 4
                         Rectangle {
                             required property int index
                             anchors.bottom: parent.bottom
-                            width: 3
-                            height: 4 + index * 3
+                            width: Theme.s(3)
+                            height: Theme.s(4) + index * 3
                             color: row.modelData.signal > index * 25 ? Colors.fg : Qt.alpha(Colors.fg, 0.2)
                         }
                     }
                 }
                 Text {
                     anchors.left: bars.right
-                    anchors.leftMargin: 10
+                    anchors.leftMargin: Theme.s(10)
                     anchors.right: meta.left
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.ssid
@@ -107,7 +107,7 @@ Column {
                 Text {
                     id: meta
                     anchors.right: parent.right
-                    anchors.rightMargin: 8
+                    anchors.rightMargin: Theme.s(8)
                     anchors.verticalCenter: parent.verticalCenter
                     text: (Net.connecting && connectTarget === row.modelData.ssid ? "connecting… " : "")
                           + (row.modelData.known ? "saved " : "")
@@ -141,7 +141,7 @@ Column {
             // inline password prompt
             Rectangle {
                 width: parent.width
-                height: root.askPassword === row.modelData.ssid ? 34 : 0
+                height: root.askPassword === row.modelData.ssid ? Theme.s(34) : 0
                 visible: height > 0
                 clip: true
                 color: Qt.alpha(Colors.fg, 0.06)
@@ -150,9 +150,9 @@ Column {
 
                 TextInput {
                     id: pw
-                    x: 10
+                    x: Theme.s(10)
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - 90
+                    width: parent.width - Theme.s(90)
                     echoMode: TextInput.Password
                     // keyboard navigation: BarNavigator types into it
                     readonly property bool navigable: true
@@ -174,7 +174,7 @@ Column {
                 }
                 PanelButton {
                     anchors.right: parent.right
-                    anchors.rightMargin: 4
+                    anchors.rightMargin: Theme.s(4)
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Connect"
                     onClicked: pw.accepted()
@@ -194,8 +194,8 @@ Column {
     }
 
     Row {
-        spacing: 6
-        topPadding: 4
+        spacing: Theme.s(6)
+        topPadding: Theme.s(4)
         PanelButton { icon: "\uf021"; text: "Rescan"; onClicked: Net.scan() }
         PanelButton { icon: "\uf127"; text: "Disconnect"; available: Net.type !== ""; onClicked: Net.disconnect() }
         PanelButton { icon: "\uf120"; text: "nmtui"; onClicked: Quickshell.execDetached(["kitty", "-e", "nmtui"]) }

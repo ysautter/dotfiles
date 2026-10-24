@@ -22,10 +22,10 @@ PanelWindow {
     anchors.top: true
     anchors.right: true
     anchors.bottom: true
-    margins.top: 6
-    margins.bottom: 14
+    margins.top: Theme.s(6)
+    margins.bottom: Theme.s(14)
     margins.right: Theme.marginRight
-    implicitWidth: 400
+    implicitWidth: Theme.s(400)
     exclusiveZone: 0
     color: "transparent"
 
@@ -43,7 +43,7 @@ PanelWindow {
         id: frame
         width: parent.width
         height: parent.height
-        x: Notifs.centerOpen ? 0 : 440
+        x: Notifs.centerOpen ? 0 : Theme.s(440)
         Behavior on x { NumberAnimation { duration: Theme.animSlow; easing.type: Easing.OutCubic } }
         color: Qt.alpha(Colors.background, 0.96)
         border.width: 1
@@ -52,14 +52,14 @@ PanelWindow {
         focus: Notifs.centerOpen
         Keys.onEscapePressed: Notifs.centerOpen = false
 
-        Rectangle { width: 2; height: parent.height; color: Colors.fg; opacity: 0.6 }
+        Rectangle { width: Theme.s(2); height: parent.height; color: Colors.fg; opacity: 0.6 }
 
         Item {
             id: header
-            x: 14
-            y: 12
-            width: parent.width - 28
-            height: 30
+            x: Theme.s(14)
+            y: Theme.s(12)
+            width: parent.width - Theme.s(28)
+            height: Theme.s(30)
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
@@ -71,7 +71,7 @@ PanelWindow {
             Row {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 8
+                spacing: Theme.s(8)
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "\uf1f6  DND"
@@ -87,13 +87,13 @@ PanelWindow {
         ListView {
             id: list
             anchors.top: header.bottom
-            anchors.topMargin: 10
+            anchors.topMargin: Theme.s(10)
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 12
-            x: 12
-            width: parent.width - 24
+            anchors.bottomMargin: Theme.s(12)
+            x: Theme.s(12)
+            width: parent.width - Theme.s(24)
             clip: true
-            spacing: 8
+            spacing: Theme.s(8)
             boundsBehavior: Flickable.StopAtBounds
             model: ScriptModel { values: Notifs.history }
 
@@ -119,13 +119,13 @@ PanelWindow {
             Column {
                 anchors.centerIn: parent
                 visible: Notifs.count === 0
-                spacing: 8
+                spacing: Theme.s(8)
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: Notifs.dnd ? "\uf1f6" : "\uf0f3"
                     color: Qt.alpha(Colors.fg, 0.3)
                     font.family: Theme.iconFont
-                    font.pixelSize: 36
+                    font.pixelSize: Theme.s(36)
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter

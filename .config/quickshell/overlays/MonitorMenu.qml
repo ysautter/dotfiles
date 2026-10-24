@@ -21,8 +21,8 @@ Overlay {
     // entries: 3 layouts + presentation mode + wdisplays
     readonly property int count: layouts.length + 2
 
-    boxWidth: 420
-    boxHeight: 52 + count * 44 + 20
+    boxWidth: Theme.s(420)
+    boxHeight: Theme.s(52) + count * Theme.s(44) + Theme.s(20)
     onCloseRequested: open = false
     onOpenChanged: if (open) { readLink.running = true; keys.forceActiveFocus(); }
 
@@ -58,7 +58,7 @@ Overlay {
     Item {
         id: keys
         anchors.fill: parent
-        anchors.margins: 14
+        anchors.margins: Theme.s(14)
         focus: true
         Keys.onPressed: e => {
             if (e.key === Qt.Key_Escape) root.open = false;
@@ -79,9 +79,9 @@ Overlay {
 
         Column {
             anchors.top: title.bottom
-            anchors.topMargin: 14
+            anchors.topMargin: Theme.s(14)
             width: parent.width
-            spacing: 4
+            spacing: Theme.s(4)
 
             Repeater {
                 model: root.count
@@ -92,23 +92,23 @@ Overlay {
                     readonly property var layout: isLayout ? root.layouts[index] : null
                     readonly property bool selected: root.current === index
                     width: parent.width
-                    height: 40
+                    height: Theme.s(40)
                     color: selected ? Colors.active : m.containsMouse ? Qt.alpha(Colors.hover, 0.35) : Qt.alpha(Colors.fg, 0.04)
                     Behavior on color { ColorAnimation { duration: Theme.animFast } }
 
-                    Rectangle { visible: row.selected; width: 3; height: parent.height; color: Colors.fg }
+                    Rectangle { visible: row.selected; width: Theme.s(3); height: parent.height; color: Colors.fg }
 
                     Text {
-                        x: 14
+                        x: Theme.s(14)
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 24
+                        width: Theme.s(24)
                         text: row.isLayout ? row.layout.glyph : row.index === root.layouts.length ? "\uf06e" : "\uf013"
                         color: Colors.fg
                         font.family: Theme.iconFont
-                        font.pixelSize: 15
+                        font.pixelSize: Theme.s(15)
                     }
                     Text {
-                        x: 48
+                        x: Theme.s(48)
                         anchors.verticalCenter: parent.verticalCenter
                         text: row.isLayout ? row.layout.label
                             : row.index === root.layouts.length ? "Presentation mode" : "Arrange displays… (wdisplays)"
@@ -119,7 +119,7 @@ Overlay {
                     Text {
                         visible: row.isLayout && row.layout.id === root.currentLayout
                         anchors.right: parent.right
-                        anchors.rightMargin: 14
+                        anchors.rightMargin: Theme.s(14)
                         anchors.verticalCenter: parent.verticalCenter
                         text: "active"
                         color: Qt.alpha(Colors.fg, 0.6)
@@ -129,7 +129,7 @@ Overlay {
                     Toggle {
                         visible: row.index === root.layouts.length
                         anchors.right: parent.right
-                        anchors.rightMargin: 12
+                        anchors.rightMargin: Theme.s(12)
                         anchors.verticalCenter: parent.verticalCenter
                         checked: Presentation.active
                         onToggled: c => Presentation.active = c

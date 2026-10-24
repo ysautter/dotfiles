@@ -7,7 +7,7 @@ import qs.services
 Column {
     id: root
     width: parent.width
-    spacing: 8
+    spacing: Theme.s(8)
 
     readonly property color dim: Qt.alpha(Colors.fg, 0.5)
     readonly property bool failed: !Tasks.configured || Tasks.error !== ""
@@ -32,7 +32,7 @@ Column {
     Rectangle {
         visible: Tasks.configured
         width: parent.width
-        height: 28
+        height: Theme.s(28)
         color: Qt.alpha(Colors.fg, 0.06)
         border.width: 1
         border.color: input.activeFocus ? Qt.alpha(Colors.fg, 0.5) : Qt.alpha(Colors.fg, 0.15)
@@ -40,8 +40,8 @@ Column {
         TextInput {
             id: input
             anchors.fill: parent
-            anchors.leftMargin: 8
-            anchors.rightMargin: 8
+            anchors.leftMargin: Theme.s(8)
+            anchors.rightMargin: Theme.s(8)
             verticalAlignment: TextInput.AlignVCenter
             color: Colors.fg
             selectionColor: Colors.active
@@ -70,7 +70,7 @@ Column {
     Column {
         visible: root.failed
         width: parent.width
-        spacing: 4
+        spacing: Theme.s(4)
         Text {
             width: parent.width
             wrapMode: Text.Wrap
@@ -92,8 +92,8 @@ Column {
     Text {
         visible: Tasks.configured && Tasks.error === "" && root.rows.length === 0
         width: parent.width
-        topPadding: 6
-        bottomPadding: 6
+        topPadding: Theme.s(6)
+        bottomPadding: Theme.s(6)
         text: Tasks.updated.getTime() > 0 ? "Nothing to do" : "Loading…"
         color: root.dim
         font.family: Theme.font
@@ -104,7 +104,7 @@ Column {
     Flickable {
         visible: root.rows.length > 0
         width: parent.width
-        height: Math.min(320, contentHeight)
+        height: Math.min(Theme.s(320), contentHeight)
         contentHeight: list.height
         clip: true
         boundsBehavior: Flickable.StopAtBounds
@@ -122,13 +122,13 @@ Column {
                     readonly property bool today: Tasks.isDueToday(task)
                     readonly property bool important: task.priority >= 1 && task.priority <= 4
                     width: list.width
-                    height: 26
+                    height: Theme.s(26)
                     color: rowMouse.containsMouse ? Qt.alpha(Colors.hover, 0.25) : "transparent"
 
                     Rectangle {
                         visible: row.important
-                        width: 2
-                        height: parent.height - 6
+                        width: Theme.s(2)
+                        height: parent.height - Theme.s(6)
                         anchors.verticalCenter: parent.verticalCenter
                         color: Colors.warning
                     }
@@ -136,8 +136,8 @@ Column {
 
                     Item {
                         id: box
-                        x: 6 + row.modelData.depth * 14
-                        width: 22
+                        x: Theme.s(6) + row.modelData.depth * Theme.s(14)
+                        width: Theme.s(22)
                         height: parent.height
                         readonly property bool navigable: true
                         function navActivate() { Tasks.complete(row.task); }
@@ -160,7 +160,7 @@ Column {
                     Text {
                         id: due
                         anchors.right: parent.right
-                        anchors.rightMargin: 6
+                        anchors.rightMargin: Theme.s(6)
                         anchors.verticalCenter: parent.verticalCenter
                         text: Tasks.dueText(row.task)
                         color: row.overdue ? Colors.critical : row.today ? Colors.warning : root.dim
@@ -171,7 +171,7 @@ Column {
                         id: rec
                         visible: row.task.recurring
                         anchors.right: due.left
-                        anchors.rightMargin: 4
+                        anchors.rightMargin: Theme.s(4)
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\uf01e"
                         color: root.dim
@@ -180,9 +180,9 @@ Column {
                     }
                     Text {
                         anchors.left: box.right
-                        anchors.leftMargin: 4
+                        anchors.leftMargin: Theme.s(4)
                         anchors.right: rec.visible ? rec.left : due.left
-                        anchors.rightMargin: 6
+                        anchors.rightMargin: Theme.s(6)
                         anchors.verticalCenter: parent.verticalCenter
                         text: (row.important ? "! " : "") + row.task.summary
                         elide: Text.ElideRight
@@ -200,11 +200,11 @@ Column {
     Item {
         visible: Tasks.lastDone !== null
         width: parent.width
-        height: 26
+        height: Theme.s(26)
         Text {
             anchors.left: parent.left
             anchors.right: undoBtn.left
-            anchors.rightMargin: 8
+            anchors.rightMargin: Theme.s(8)
             anchors.verticalCenter: parent.verticalCenter
             text: "Done: " + (Tasks.lastDone?.summary ?? "")
             elide: Text.ElideRight
@@ -223,11 +223,11 @@ Column {
     // footer
     Item {
         width: parent.width
-        height: 26
+        height: Theme.s(26)
         Text {
             anchors.left: parent.left
             anchors.right: refreshBtn.left
-            anchors.rightMargin: 8
+            anchors.rightMargin: Theme.s(8)
             anchors.verticalCenter: parent.verticalCenter
             elide: Text.ElideRight
             text: {

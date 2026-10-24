@@ -53,7 +53,7 @@ Row {
     BarModule {
         id: cpu
         shown: Theme.glance.includes("cpu")
-        hpadding: 7
+        hpadding: Theme.s(7)
         icon: "\u{f0ee0}"
         text: String(Math.round(SysMon.cpu)).padStart(2, " ") + "%"
         level: SysMon.cpu / 100
@@ -68,7 +68,7 @@ Row {
     BarModule {
         id: mem
         shown: Theme.glance.includes("mem")
-        hpadding: 7
+        hpadding: Theme.s(7)
         icon: "\u{f035b}"
         text: Math.round(root.memPct) + "%"
         level: SysMon.memUsedFrac

@@ -12,7 +12,7 @@ import qs.services
 Column {
     id: root
     width: parent.width
-    spacing: 12
+    spacing: Theme.s(12)
 
     property bool open: false
     property string tab: "today"
@@ -27,7 +27,7 @@ Column {
 
     Row {
         width: root.width
-        spacing: 4
+        spacing: Theme.s(4)
         Repeater {
             model: root.tabs
             PanelButton {
@@ -45,12 +45,12 @@ Column {
         id: today
         visible: root.tab === "today"
         width: root.width
-        spacing: 20
+        spacing: Theme.s(20)
         readonly property real colWidth: (width - spacing * 2) / 3
 
-        Column { width: today.colWidth; spacing: 10; CalendarPanel { active: root.open } }
-        Column { width: today.colWidth; spacing: 10; WeatherPanel {} }
-        Column { width: today.colWidth; spacing: 10; TasksPanel {} }
+        Column { width: today.colWidth; spacing: Theme.s(10); CalendarPanel { active: root.open } }
+        Column { width: today.colWidth; spacing: Theme.s(10); WeatherPanel {} }
+        Column { width: today.colWidth; spacing: Theme.s(10); TasksPanel {} }
     }
 
     NewsPanel { visible: root.tab === "news"; active: root.open && visible }
@@ -61,26 +61,26 @@ Column {
         id: system
         visible: root.tab === "system"
         width: root.width
-        spacing: 20
+        spacing: Theme.s(20)
         readonly property real colWidth: (width - spacing * 2) / 3
 
         Column {
             width: system.colWidth
-            spacing: 10
+            spacing: Theme.s(10)
             SectionHeader { text: "System" }
             SystemPanel { showTop: false }
         }
         Column {
             width: system.colWidth
-            spacing: 10
+            spacing: Theme.s(10)
             SectionHeader { text: "Claude" }
             ClaudePanel {}
         }
         Column {
             width: system.colWidth
-            spacing: 10
+            spacing: Theme.s(10)
             SectionHeader { text: "Updates" }
-            UpdatesPanel { maxListHeight: 300 }
+            UpdatesPanel { maxListHeight: Theme.s(300) }
         }
     }
 }

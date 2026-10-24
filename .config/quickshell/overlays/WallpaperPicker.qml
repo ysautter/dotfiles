@@ -16,8 +16,8 @@ Overlay {
     property string filter: ""
     readonly property var shown: walls.filter(w => filter === "" || w.name.toLowerCase().includes(filter.toLowerCase()))
 
-    boxWidth: 4 * 230 + 28 + 4
-    boxHeight: 560
+    boxWidth: 4 * Theme.s(230) + Theme.s(28) + Theme.s(4)
+    boxHeight: Theme.s(560)
     onCloseRequested: open = false
     onOpenChanged: if (open) {
         filter = "";
@@ -57,12 +57,12 @@ Overlay {
 
     Item {
         anchors.fill: parent
-        anchors.margins: 14
+        anchors.margins: Theme.s(14)
 
         Item {
             id: head
             width: parent.width
-            height: 30
+            height: Theme.s(30)
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "\uf03e  Wallpapers" + (scan.running && root.walls.length === 0 ? "  ·  generating thumbnails…" : `  ·  ${root.shown.length}`)
@@ -83,11 +83,11 @@ Overlay {
         GridView {
             id: grid
             anchors.top: head.bottom
-            anchors.topMargin: 10
+            anchors.topMargin: Theme.s(10)
             anchors.bottom: parent.bottom
             width: parent.width
-            cellWidth: 230
-            cellHeight: 140
+            cellWidth: Theme.s(230)
+            cellHeight: Theme.s(140)
             clip: true
             focus: true
             model: root.shown
@@ -115,12 +115,12 @@ Overlay {
                 required property int index
                 readonly property bool selected: GridView.isCurrentItem
                 readonly property bool active: modelData.path === root.currentWall
-                width: 230
-                height: 140
+                width: Theme.s(230)
+                height: Theme.s(140)
 
                 Rectangle {
                     anchors.fill: parent
-                    anchors.margins: 5
+                    anchors.margins: Theme.s(5)
                     color: Qt.alpha(Colors.fg, 0.06)
                     border.width: cell.selected ? 2 : cell.active ? 1 : 0
                     border.color: Colors.fg
@@ -129,7 +129,7 @@ Overlay {
 
                     Image {
                         anchors.fill: parent
-                        anchors.margins: cell.selected ? 2 : 0
+                        anchors.margins: cell.selected ? Theme.s(2) : 0
                         source: "file://" + cell.modelData.thumb
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
@@ -140,22 +140,22 @@ Overlay {
                         visible: cell.active
                         anchors.top: parent.top
                         anchors.right: parent.right
-                        anchors.margins: 6
-                        width: 20
-                        height: 20
+                        anchors.margins: Theme.s(6)
+                        width: Theme.s(20)
+                        height: Theme.s(20)
                         color: Qt.alpha(Colors.background, 0.85)
-                        Text { anchors.centerIn: parent; text: "\uf00c"; color: Colors.fg; font.family: Theme.iconFont; font.pixelSize: 11 }
+                        Text { anchors.centerIn: parent; text: "\uf00c"; color: Colors.fg; font.family: Theme.iconFont; font.pixelSize: Theme.s(11) }
                     }
                     Rectangle {
                         anchors.bottom: parent.bottom
                         width: parent.width
-                        height: 20
+                        height: Theme.s(20)
                         color: Qt.alpha(Colors.background, 0.75)
                         visible: cell.selected
                         Text {
-                            x: 6
+                            x: Theme.s(6)
                             anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - 12
+                            width: parent.width - Theme.s(12)
                             elide: Text.ElideMiddle
                             text: cell.modelData.name
                             color: Colors.fg

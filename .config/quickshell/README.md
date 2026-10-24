@@ -55,6 +55,10 @@ features: `qs ipc show`.
 - `qs ipc call bar-<output> panel <name>`: `dashboard[:<tab>]` (`today`,
   `news`, `markets`, `system`), `quick:<tab>` (`network`, `bluetooth`,
   `audio`, `battery`), `system`, `claude`, `updates`.
+- **UI scale**: everything (fonts, bar, panels, overlays) scales with
+  `Theme.uiScale`: `$QS_SCALE`, else this host in `Theme.uiScales`
+  (yss3l: 1.2), else `Theme.uiScaleDefault` (1.0). Sizes in QML are written
+  at scale 1 as `Theme.s(px)`.
 
 ## Dashboard data
 

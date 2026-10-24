@@ -10,7 +10,7 @@ import qs.components
 Column {
     id: root
     width: parent.width
-    spacing: 10
+    spacing: Theme.s(10)
 
     property bool open: false
     property string tab: "network"
@@ -21,7 +21,7 @@ Column {
 
     Row {
         width: root.width
-        spacing: 4
+        spacing: Theme.s(4)
 
         Repeater {
             model: [

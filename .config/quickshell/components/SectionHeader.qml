@@ -5,7 +5,7 @@ import qs.config
 Item {
     id: root
     property string text
-    implicitHeight: 22
+    implicitHeight: Theme.s(22)
     width: parent?.width ?? 0
 
     Text {
@@ -19,7 +19,7 @@ Item {
     }
     Rectangle {
         anchors.left: label.right
-        anchors.leftMargin: 8
+        anchors.leftMargin: Theme.s(8)
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         height: 1

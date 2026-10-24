@@ -8,7 +8,7 @@ import qs.components
 Column {
     id: root
     width: parent.width
-    spacing: 8
+    spacing: Theme.s(8)
 
     property bool active: false
     readonly property BluetoothAdapter adapter: Bluetooth.defaultAdapter
@@ -30,7 +30,7 @@ Column {
     Item {
         visible: root.adapter !== null
         width: root.width
-        height: 26
+        height: Theme.s(26)
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: "\uf293  " + (root.adapter?.name ?? "Bluetooth")
@@ -54,14 +54,14 @@ Column {
             id: row
             required property BluetoothDevice modelData
             width: root.width
-            height: 30
+            height: Theme.s(30)
             color: modelData.connected ? Colors.active : m.containsMouse ? Qt.alpha(Colors.hover, 0.35) : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.animFast } }
 
             Text {
-                x: 8
+                x: Theme.s(8)
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 120
+                width: parent.width - Theme.s(120)
                 elide: Text.ElideRight
                 text: row.modelData.name || row.modelData.address
                 color: row.modelData.paired ? Colors.fg : Qt.alpha(Colors.fg, 0.6)
@@ -70,7 +70,7 @@ Column {
             }
             Text {
                 anchors.right: parent.right
-                anchors.rightMargin: 8
+                anchors.rightMargin: Theme.s(8)
                 anchors.verticalCenter: parent.verticalCenter
                 text: row.modelData.pairing ? "pairing…"
                     : row.modelData.state === BluetoothDeviceState.Connecting ? "connecting…"
@@ -99,8 +99,8 @@ Column {
     }
 
     Row {
-        spacing: 6
-        topPadding: 4
+        spacing: Theme.s(6)
+        topPadding: Theme.s(4)
         visible: root.adapter?.enabled ?? false
         PanelButton {
             icon: "\uf002"

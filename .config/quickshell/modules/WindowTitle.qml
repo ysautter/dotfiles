@@ -18,7 +18,7 @@ BarModule {
 
     text: onThisMonitor ? (toplevel.title || appClass) : ""
     shown: text !== "" && maxTextWidth >= 80
-    maxTextWidth: 420
+    maxTextWidth: Theme.s(420)
     tooltip: onThisMonitor ? `${toplevel.title}\n${appClass}` : ""
 
     // quick fade when the focused window changes

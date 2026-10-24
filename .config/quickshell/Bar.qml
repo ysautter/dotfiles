@@ -158,7 +158,7 @@ PanelWindow {
             WindowTitle {
                 screen: bar.screen
                 // use whatever room is left before the centre block
-                maxTextWidth: Math.max(0, Math.min(420, centre.x - left.x - 12
+                maxTextWidth: Math.max(0, Math.min(Theme.s(420), centre.x - left.x - Theme.s(12)
                     - workspaces.implicitWidth - submap.implicitWidth - Theme.padding * 2))
             }
         }
@@ -167,7 +167,7 @@ PanelWindow {
             id: centre
             // centred, pushed left if the right block would overlap it, but
             // never over the workspaces
-            x: Math.max(left.x + workspaces.implicitWidth + submap.implicitWidth + 12,
+            x: Math.max(left.x + workspaces.implicitWidth + submap.implicitWidth + Theme.s(12),
                         Math.min(Math.round((parent.width - width) / 2), right.x - width - 12))
             y: Theme.gapTop
             opacity: 0
@@ -214,7 +214,7 @@ PanelWindow {
         Behavior on x { NumberAnimation { duration: Theme.animFast; easing.type: Easing.OutCubic } }
         Behavior on width { NumberAnimation { duration: Theme.animFast; easing.type: Easing.OutCubic } }
         Behavior on opacity { NumberAnimation { duration: Theme.animFast } }
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: Colors.fg }
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: Theme.s(2); color: Colors.fg }
 
         // modules move and resize (animations, changing text): follow them
         function place() {
@@ -237,7 +237,7 @@ PanelWindow {
         id: panels
 
         BarPanel {
-            id: panel_dashboard; bar: bar; name: "dashboard"; panelWidth: 1020
+            id: panel_dashboard; bar: bar; name: "dashboard"; panelWidth: Theme.s(1020)
             DashboardPanel {
                 open: bar.panel === "dashboard"
                 tab: bar.dashTab
@@ -245,16 +245,16 @@ PanelWindow {
             }
         }
         BarPanel {
-            id: panel_quick; bar: bar; name: "quick"; panelWidth: 400
+            id: panel_quick; bar: bar; name: "quick"; panelWidth: Theme.s(400)
             QuickPanel {
                 open: bar.panel === "quick"
                 tab: bar.quickTab
                 onTabRequested: name => bar.quickTab = name
             }
         }
-        BarPanel { id: panel_claude;  bar: bar; name: "claude";  panelWidth: 320; ClaudePanel {} }
-        BarPanel { id: panel_updates; bar: bar; name: "updates"; panelWidth: 420; UpdatesPanel {} }
-        BarPanel { id: panel_system;  bar: bar; name: "system";  panelWidth: 360; SystemPanel { active: bar.panel === "system" } }
+        BarPanel { id: panel_claude;  bar: bar; name: "claude";  panelWidth: Theme.s(320); ClaudePanel {} }
+        BarPanel { id: panel_updates; bar: bar; name: "updates"; panelWidth: Theme.s(420); UpdatesPanel {} }
+        BarPanel { id: panel_system;  bar: bar; name: "system";  panelWidth: Theme.s(360); SystemPanel { active: bar.panel === "system" } }
     }
 
     // `qs ipc call bar panel <name>` (e.g. for keybinds)

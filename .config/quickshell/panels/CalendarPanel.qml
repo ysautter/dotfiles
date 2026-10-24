@@ -6,7 +6,7 @@ import qs.components
 Column {
     id: root
     width: parent.width
-    spacing: 8
+    spacing: Theme.s(8)
 
     property bool active: false
     property date today: new Date()
@@ -50,7 +50,7 @@ Column {
 
     Item {
         width: root.width
-        height: 28
+        height: Theme.s(28)
         PanelButton { anchors.left: parent.left; icon: "\uf053"; onClicked: root.shift(-1) }
         Text {
             anchors.centerIn: parent
@@ -78,7 +78,7 @@ Column {
                 required property string modelData
                 required property int index
                 width: grid.cell
-                height: 24
+                height: Theme.s(24)
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 text: modelData
@@ -100,7 +100,7 @@ Column {
                 readonly property bool inMonth: day.getMonth() === root.month
 
                 width: grid.cell
-                height: 28
+                height: Theme.s(28)
                 color: isToday ? Colors.active : m.containsMouse && col > 0 ? Qt.alpha(Colors.hover, 0.3) : "transparent"
 
                 Text {
@@ -116,7 +116,7 @@ Column {
                     visible: cell.isToday
                     anchors.bottom: parent.bottom
                     width: parent.width
-                    height: 2
+                    height: Theme.s(2)
                     color: Colors.fg
                 }
                 MouseArea { id: m; anchors.fill: parent; hoverEnabled: true }

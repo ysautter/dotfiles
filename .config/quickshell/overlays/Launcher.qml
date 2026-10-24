@@ -22,8 +22,8 @@ Overlay {
                                  : query.startsWith("@") ? "clip" : "apps"
     readonly property string term: mode === "apps" ? query.trim() : query.slice(1).trim()
 
-    boxWidth: 640
-    boxHeight: 470
+    boxWidth: Theme.s(640)
+    boxHeight: Theme.s(470)
     onCloseRequested: open = false
 
     function show(mode) {
@@ -164,25 +164,25 @@ Overlay {
     // ---- UI -------------------------------------------------------------------------------
     Item {
         anchors.fill: parent
-        anchors.margins: 14
+        anchors.margins: Theme.s(14)
 
         // search field
         Rectangle {
             id: searchBox
             width: parent.width
-            height: 40
+            height: Theme.s(40)
             color: Qt.alpha(Colors.fg, 0.06)
             border.width: 1
             border.color: Qt.alpha(Colors.fg, 0.4)
 
             Text {
                 id: modeIcon
-                x: 12
+                x: Theme.s(12)
                 anchors.verticalCenter: parent.verticalCenter
                 text: ({ apps: "\uf002", calc: "\uf1ec", emoji: "\uf118", run: "\uf120", clip: "\uf0ea" })[root.mode]
                 color: Colors.fg
                 font.family: Theme.iconFont
-                font.pixelSize: 15
+                font.pixelSize: Theme.s(15)
                 Behavior on text {
                     SequentialAnimation {
                         NumberAnimation { target: modeIcon; property: "scale"; to: 0.4; duration: 80 }
@@ -195,9 +195,9 @@ Overlay {
             TextInput {
                 id: search
                 anchors.left: modeIcon.right
-                anchors.leftMargin: 12
+                anchors.leftMargin: Theme.s(12)
                 anchors.right: parent.right
-                anchors.rightMargin: 12
+                anchors.rightMargin: Theme.s(12)
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.query
                 onTextChanged: root.query = text
@@ -234,8 +234,8 @@ Overlay {
         Row {
             id: tabs
             anchors.top: searchBox.bottom
-            anchors.topMargin: 8
-            spacing: 4
+            anchors.topMargin: Theme.s(8)
+            spacing: Theme.s(4)
             Repeater {
                 model: [["apps", "Apps", ""], ["calc", "Calc", "="], ["emoji", "Emoji", ":"], ["run", "Run", ">"], ["clip", "Clipboard", "@"]]
                 PanelButton {
@@ -250,7 +250,7 @@ Overlay {
         ListView {
             id: list
             anchors.top: tabs.bottom
-            anchors.topMargin: 8
+            anchors.topMargin: Theme.s(8)
             anchors.bottom: parent.bottom
             width: parent.width
             clip: true
@@ -261,7 +261,7 @@ Overlay {
             boundsBehavior: Flickable.StopAtBounds
             highlight: Rectangle {
                 color: Colors.active
-                Rectangle { width: 3; height: parent.height; color: Colors.fg }
+                Rectangle { width: Theme.s(3); height: parent.height; color: Colors.fg }
             }
 
             delegate: Item {
@@ -269,13 +269,13 @@ Overlay {
                 required property var modelData
                 required property int index
                 width: ListView.view.width
-                height: 44
+                height: Theme.s(44)
 
                 Item {
                     id: iconBox
-                    x: 12
-                    width: 28
-                    height: 28
+                    x: Theme.s(12)
+                    width: Theme.s(28)
+                    height: Theme.s(28)
                     anchors.verticalCenter: parent.verticalCenter
 
                     IconImage {
@@ -291,17 +291,17 @@ Overlay {
                         text: row.modelData.kind === "emoji" ? row.modelData.char : row.modelData.glyph
                         color: Colors.fg
                         font.family: row.modelData.kind === "emoji" ? "Noto Color Emoji" : Theme.iconFont
-                        font.pixelSize: row.modelData.kind === "emoji" ? 22 : 16
+                        font.pixelSize: row.modelData.kind === "emoji" ? Theme.s(22) : Theme.s(16)
                     }
                 }
 
                 Column {
                     anchors.left: iconBox.right
-                    anchors.leftMargin: 12
+                    anchors.leftMargin: Theme.s(12)
                     anchors.right: parent.right
-                    anchors.rightMargin: 12
+                    anchors.rightMargin: Theme.s(12)
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
+                    spacing: Theme.s(2)
                     Text {
                         width: parent.width
                         text: row.modelData.title

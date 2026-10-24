@@ -12,9 +12,9 @@ PanelWindow {
     visible: Osd.visible || box.opacity > 0
 
     anchors.bottom: true
-    margins.bottom: 90
-    implicitWidth: 320
-    implicitHeight: 48 + 16
+    margins.bottom: Theme.s(90)
+    implicitWidth: Theme.s(320)
+    implicitHeight: Theme.s(48) + Theme.s(16)
     exclusiveZone: 0
     color: "transparent"
     mask: Region {}            // click-through
@@ -25,8 +25,8 @@ PanelWindow {
     Rectangle {
         id: box
         width: parent.width
-        height: 48
-        y: Osd.visible ? 0 : 16
+        height: Theme.s(48)
+        y: Osd.visible ? 0 : Theme.s(16)
         opacity: Osd.visible ? 1 : 0
         color: Qt.alpha(Colors.background, 0.92)
         border.width: 1
@@ -40,23 +40,23 @@ PanelWindow {
         Text {
             id: icon
             anchors.left: parent.left
-            anchors.leftMargin: 16
+            anchors.leftMargin: Theme.s(16)
             anchors.verticalCenter: parent.verticalCenter
-            width: 22
+            width: Theme.s(22)
             horizontalAlignment: Text.AlignHCenter
             text: Osd.icon
             color: box.tint
             font.family: Theme.iconFont
-            font.pixelSize: 18
+            font.pixelSize: Theme.s(18)
             Behavior on color { ColorAnimation { duration: Theme.animFast } }
         }
 
         Text {
             anchors.left: icon.right
-            anchors.leftMargin: 12
+            anchors.leftMargin: Theme.s(12)
             anchors.right: pct.left
-            anchors.rightMargin: 12
-            y: Osd.value >= 0 ? 8 : (parent.height - height) / 2
+            anchors.rightMargin: Theme.s(12)
+            y: Osd.value >= 0 ? Theme.s(8) : (parent.height - height) / 2
             text: Osd.label
             elide: Text.ElideRight
             color: box.tint
@@ -69,8 +69,8 @@ PanelWindow {
             id: pct
             visible: Osd.value >= 0
             anchors.right: parent.right
-            anchors.rightMargin: 16
-            y: 8
+            anchors.rightMargin: Theme.s(16)
+            y: Theme.s(8)
             text: Math.round(Osd.value * 100) + "%"
             color: box.tint
             font.family: Theme.font
@@ -82,11 +82,11 @@ PanelWindow {
             id: track
             visible: Osd.value >= 0
             anchors.left: icon.right
-            anchors.leftMargin: 12
+            anchors.leftMargin: Theme.s(12)
             anchors.right: parent.right
-            anchors.rightMargin: 16
-            y: 32
-            height: 4
+            anchors.rightMargin: Theme.s(16)
+            y: Theme.s(32)
+            height: Theme.s(4)
             color: Qt.alpha(Colors.fg, 0.15)
 
             Rectangle {

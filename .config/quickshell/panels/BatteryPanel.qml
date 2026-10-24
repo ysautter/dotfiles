@@ -9,7 +9,7 @@ import qs.components
 Column {
     id: root
     width: parent.width
-    spacing: 8
+    spacing: Theme.s(8)
 
     readonly property var dev: UPower.displayDevice
     readonly property var bat: UPower.devices.values.find(d => d.isLaptopBattery) ?? null
@@ -25,20 +25,20 @@ Column {
         property string label
         property string value
         width: root.width
-        height: 18
+        height: Theme.s(18)
         Text { text: parent.label; color: Qt.alpha(Colors.fg, 0.7); font.family: Theme.font; font.pixelSize: Theme.fontSize - 1 }
         Text { anchors.right: parent.right; text: parent.value; color: Colors.fg; font.family: Theme.font; font.pixelSize: Theme.fontSize - 1 }
     }
 
     Item {
         width: root.width
-        height: 30
+        height: Theme.s(30)
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: root.pct + "%"
             color: Colors.fg
             font.family: Theme.font
-            font.pixelSize: 22
+            font.pixelSize: Theme.s(22)
         }
         Text {
             anchors.right: parent.right
@@ -51,7 +51,7 @@ Column {
     }
     Rectangle {
         width: root.width
-        height: 8
+        height: Theme.s(8)
         color: Qt.alpha(Colors.fg, 0.12)
         Rectangle {
             height: parent.height
@@ -81,10 +81,10 @@ Column {
         active: root.hasPpd
         width: root.width
         sourceComponent: Column {
-            spacing: 8
+            spacing: Theme.s(8)
             SectionHeader { text: "Power profile" }
             Row {
-                spacing: 6
+                spacing: Theme.s(6)
                 PanelButton {
                     text: "Power saver"
                     active: PowerProfiles.profile === PowerProfile.PowerSaver

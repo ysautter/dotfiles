@@ -48,16 +48,16 @@ Item {
     Column {
         id: centre
         anchors.centerIn: parent
-        anchors.verticalCenterOffset: -40 + (1 - root.intro) * 40
+        anchors.verticalCenterOffset: -Theme.s(40) + (1 - root.intro) * Theme.s(40)
         opacity: root.intro
-        spacing: 6
+        spacing: Theme.s(6)
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Qt.formatTime(clock.date, "HH:mm")
             color: Colors.fg
             font.family: Theme.font
-            font.pixelSize: 120
+            font.pixelSize: Theme.s(120)
             font.weight: Font.Light
         }
         Text {
@@ -65,16 +65,16 @@ Item {
             text: Qt.formatDate(clock.date, "dddd, d. MMMM yyyy")
             color: Qt.alpha(Colors.fg, 0.8)
             font.family: Theme.font
-            font.pixelSize: 20
+            font.pixelSize: Theme.s(20)
         }
-        Item { width: 1; height: 50 }
+        Item { width: 1; height: Theme.s(50) }
 
         // password box
         Rectangle {
             id: box
             anchors.horizontalCenter: parent.horizontalCenter
-            width: 360
-            height: 48
+            width: Theme.s(360)
+            height: Theme.s(48)
             color: Qt.alpha(Colors.background, 0.75)
             border.width: 1
             border.color: root.lock.error !== "" ? Colors.critical : input.activeFocus ? Colors.fg : Qt.alpha(Colors.fg, 0.4)
@@ -94,23 +94,23 @@ Item {
             }
 
             Text {
-                x: 16
+                x: Theme.s(16)
                 anchors.verticalCenter: parent.verticalCenter
                 text: "\uf023"
                 color: Colors.fg
                 font.family: Theme.iconFont
-                font.pixelSize: 16
+                font.pixelSize: Theme.s(16)
             }
 
             // dots instead of text
             Row {
                 anchors.centerIn: parent
-                spacing: 8
+                spacing: Theme.s(8)
                 Repeater {
                     model: Math.min(root.lock.password.length, 24)
                     Rectangle {
-                        width: 9
-                        height: 9
+                        width: Theme.s(9)
+                        height: Theme.s(9)
                         color: Colors.fg
                         scale: 0
                         Component.onCompleted: scale = 1
@@ -132,7 +132,7 @@ Item {
             Rectangle {
                 visible: root.lock.busy
                 anchors.bottom: parent.bottom
-                height: 2
+                height: Theme.s(2)
                 width: parent.width * 0.3
                 color: Colors.fg
                 NumberAnimation on x { running: root.lock.busy; loops: Animation.Infinite; from: 0; to: box.width * 0.7; duration: 700; easing.type: Easing.InOutQuad }
@@ -155,7 +155,7 @@ Item {
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            height: 24
+            height: Theme.s(24)
             verticalAlignment: Text.AlignVCenter
             text: root.lock.error
             color: Colors.critical
@@ -167,9 +167,9 @@ Item {
     // ---- bottom: user, battery, media --------------------------------------------------------
     Row {
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 30
+        anchors.bottomMargin: Theme.s(30)
         anchors.horizontalCenter: parent.horizontalCenter
-        spacing: 24
+        spacing: Theme.s(24)
         opacity: root.intro * 0.85
 
         Text {
@@ -187,13 +187,13 @@ Item {
         }
         Row {
             visible: Media.active
-            spacing: 10
+            spacing: Theme.s(10)
             Text {
                 text: "\uf001  " + Media.title + (Media.artist ? " — " + Media.artist : "")
                 color: Colors.fg
                 font.family: Theme.iconFont
                 font.pixelSize: Theme.fontSize
-                width: Math.min(implicitWidth, 420)
+                width: Math.min(implicitWidth, Theme.s(420))
                 elide: Text.ElideRight
             }
             Text {
@@ -201,7 +201,7 @@ Item {
                 color: Colors.fg
                 font.family: Theme.iconFont
                 font.pixelSize: Theme.fontSize
-                MouseArea { anchors.fill: parent; anchors.margins: -6; cursorShape: Qt.PointingHandCursor; onClicked: Media.togglePlaying() }
+                MouseArea { anchors.fill: parent; anchors.margins: -Theme.s(6); cursorShape: Qt.PointingHandCursor; onClicked: Media.togglePlaying() }
             }
         }
     }

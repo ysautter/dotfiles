@@ -46,7 +46,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width
-            height: 2
+            height: Theme.s(2)
             color: Colors.fg
         }
     }
@@ -85,7 +85,7 @@ Item {
             Component.onCompleted: if (isActive) highlight.target = ws
             Component.onDestruction: if (highlight.target === ws) highlight.target = null
 
-            width: txt.implicitWidth + 20
+            width: txt.implicitWidth + Theme.s(20)
             height: Theme.barHeight
 
             // hover

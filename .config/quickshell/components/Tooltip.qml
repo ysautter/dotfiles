@@ -15,10 +15,10 @@ PopupWindow {
     anchor.item: target
     anchor.edges: Edges.Bottom
     anchor.gravity: Edges.Bottom
-    anchor.margins.top: 6
+    anchor.margins.top: Theme.s(6)
 
-    implicitWidth: label.implicitWidth + 24
-    implicitHeight: label.implicitHeight + 14 + 8
+    implicitWidth: label.implicitWidth + Theme.s(24)
+    implicitHeight: label.implicitHeight + Theme.s(14) + Theme.s(8)
     color: "transparent"
     visible: box.opacity > 0
 
@@ -41,14 +41,14 @@ PopupWindow {
     Rectangle {
         id: box
         width: parent.width
-        height: parent.height - 8
+        height: parent.height - Theme.s(8)
         color: Qt.alpha(Colors.background, 0.95)
         border.width: 1
         border.color: Qt.alpha(Colors.fg, 0.35)
         radius: 0
 
         opacity: root.active ? 1 : 0
-        y: root.active ? 0 : -8
+        y: root.active ? 0 : -Theme.s(8)
         Behavior on opacity { NumberAnimation { duration: Theme.animFast } }
         Behavior on y { NumberAnimation { duration: Theme.animMed; easing.type: Easing.OutCubic } }
 
