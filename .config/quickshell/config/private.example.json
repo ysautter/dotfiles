@@ -1,0 +1,39 @@
+{
+  "_comment": "Copy to ~/.local/share/quickshell/private.json and chmod 600. Deep-merged over config/dashboard.json; never commit the real file.",
+
+  "tasks": {
+    "username": "you@sautter.dev",
+    "password": "app-password",
+    "_or": "\"passwordCommand\": \"secret-tool lookup service caldav\" instead of password"
+  },
+
+  "markets": {
+    "holdings": [
+      { "symbol": "A2PKXG", "quantity": 10, "cost": 1000, "name": "FTSE All-World" },
+      { "symbol": "IE00B4L5Y983", "quantity": 5, "cost": 400 },
+      { "symbol": "BTC-EUR", "quantity": 0.05, "cost": 2000, "name": "Bitcoin" }
+    ],
+    "cash": [
+      { "name": "Tagesgeld", "actual": "Tagesgeld" },
+      { "name": "Bargeld", "amount": 200, "currency": "EUR" }
+    ]
+  },
+
+  "kraken": {
+    "_comment": "API key with only the 'Query Funds' permission; coins -> holdings, fiat -> cash",
+    "apiKey": "...",
+    "apiSecret": "...",
+    "_or": "\"apiSecretCommand\": \"secret-tool lookup service kraken\" instead of apiSecret",
+    "cost": { "BTC": 2000 },
+    "names": { "BTC": "Bitcoin" },
+    "ignore": ["KFEE"],
+    "minValue": 1,
+    "refreshMinutes": 15
+  },
+
+  "actual": {
+    "password": "Actual server password",
+    "budget": "budget name (only needed with several budgets)",
+    "encryptionPassword": "only if end-to-end encryption is on"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "_comment": "Dashboard data sources. Deep-merged with ~/.local/share/quickshell/private.json (credentials, holdings, API keys - never commit those). See README.md.",
+
+  "weather": {
+    "_comment": "location: \"auto\" = IP geolocation; name/latitude/longitude are the fallback (or fixed if location is not auto)",
+    "location": "auto",
+    "name": "Köln",
+    "latitude": 50.94,
+    "longitude": 6.96,
+    "refreshMinutes": 15
+  },
+
+  "news": {
+    "refreshMinutes": 30,
+    "perFeed": 8,
+    "feeds": [
+      { "name": "tagesschau", "url": "https://www.tagesschau.de/infoservices/alle-meldungen-100~rss2.xml" },
+      { "name": "heise", "url": "https://www.heise.de/rss/heise-top-atom.xml" },
+      { "name": "Hacker News", "url": "https://hnrss.org/frontpage?points=150" },
+      { "name": "LWN", "url": "https://lwn.net/headlines/rss" },
+      { "name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index" },
+      { "name": "Arch Linux", "url": "https://archlinux.org/feeds/news/", "limit": 3 }
+    ]
+  },
+
+  "markets": {
+    "base": "EUR",
+    "refreshMinutes": 5,
+    "watchlist": [
+      { "symbol": "^GDAXI", "name": "DAX" },
+      { "symbol": "^GSPC", "name": "S&P 500" },
+      { "symbol": "URTH", "name": "MSCI World (iShares)" },
+      { "symbol": "BTC-EUR", "name": "Bitcoin" },
+      { "symbol": "ETH-EUR", "name": "Ethereum" },
+      { "symbol": "EURUSD=X", "name": "EUR/USD" }
+    ],
+    "holdings": [],
+    "cash": []
+  },
+
+  "actual": {
+    "_comment": "Actual Budget sync server for cash balances (markets.cash[].actual); password in private.json",
+    "url": "https://actual.sautter.dev",
+    "budget": "",
+    "refreshMinutes": 30
+  },
+
+  "tasks": {
+    "url": "https://mx.sautter.dev/dav/cal/",
+    "calendar": "Tasks",
+    "refreshMinutes": 5
+  }
+}

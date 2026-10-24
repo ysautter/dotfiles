@@ -43,6 +43,7 @@ PanelWindow {
     property string panel: ""
     property Item panelAnchor: null
     property string quickTab: "network"
+    property string dashTab: "today"
 
     // ---- keyboard navigation (components/BarNavigator.qml) -----------------------
     property bool navActive: false
@@ -71,6 +72,8 @@ PanelWindow {
     function openPanel(name, anchor) {
         if (["network", "bluetooth", "audio", "battery"].includes(name)) name = "quick:" + name;
         if (name.startsWith("quick:")) { quickTab = name.slice(6); name = "quick"; }
+        if (name === "dashboard") dashTab = "today";
+        if (name.startsWith("dashboard:")) { dashTab = name.slice(10); name = "dashboard"; }
         panelAnchor = anchor;
         panel = name;
     }
@@ -80,7 +83,19 @@ PanelWindow {
     function togglePanel(name, anchor) {
         // old panel names (keybinds, scripts)
         if (["network", "bluetooth", "audio", "battery"].includes(name)) name = "quick:" + name;
-        if (name === "calendar") name = "dashboard";
+        if (name === "calendar") name = "dashboard:today";
+        if (["weather", "tasks"].includes(name)) name = "dashboard:today";
+        if (["news", "markets"].includes(name)) name = "dashboard:" + name;
+        if (name === "dashboard" && panel !== "dashboard") dashTab = "today";
+        if (name.startsWith("dashboard:")) {
+            const tab = name.slice(10);
+            if (panel === "dashboard" && dashTab !== tab) {
+                dashTab = tab;
+                return;
+            }
+            dashTab = tab;
+            name = "dashboard";
+        }
         if (name.startsWith("quick:")) {
             const tab = name.slice(6);
             if (panel === "quick" && quickTab !== tab) {
@@ -214,14 +229,21 @@ PanelWindow {
     Tooltip {
         target: centre
         hovered: bar.navActive && bar.panel === ""
-        text: "h/l move · ⏎ open · j into panel · r/m alt action · 1-9 workspace\nn net · b bt · a audio · p power · d dashboard · u updates · s system · C claude · N notifs · q quit"
+        text: "h/l move · ⏎ open · j into panel · r/m alt action · 1-9 workspace\nn net · b bt · a audio · p power · d dashboard · t today · i news · M markets · u updates · s system · C claude · N notifs · q quit"
     }
 
     // ---- panels ---------------------------------------------------------------------------
     Item {
         id: panels
 
-        BarPanel { id: panel_dashboard; bar: bar; name: "dashboard"; panelWidth: 1020; DashboardPanel { open: bar.panel === "dashboard" } }
+        BarPanel {
+            id: panel_dashboard; bar: bar; name: "dashboard"; panelWidth: 1020
+            DashboardPanel {
+                open: bar.panel === "dashboard"
+                tab: bar.dashTab
+                onTabRequested: name => bar.dashTab = name
+            }
+        }
         BarPanel {
             id: panel_quick; bar: bar; name: "quick"; panelWidth: 400
             QuickPanel {

@@ -30,26 +30,52 @@ features: `qs ipc show`.
 ## Bar ("calm bar")
 
 ```
-[ workspaces · title ]      [ Tue │ 23:32 │ 20.10.26 ]      [ attention │ glance │ 󰤨 🔊 🔋 │ 🔔 ]
+[ workspaces · title ]      [ Tue │ 23:32 │ 20.10.26 │ ☀ 11° ]      [ attention │ glance │ 󰤨 🔊 🔋 │ 🔔 ]
 ```
 
-- **Clock** (weekday · time · date) → dashboard: calendar, CPU/memory,
-  disks, Claude, updates.
+- **Clock** (weekday · time · date · weather) → dashboard with tabs:
+  **Today** (calendar, weather, CalDAV tasks), **News** (RSS/Atom),
+  **Markets** (portfolio + watchlist), **System** (CPU/memory, disks,
+  Claude, updates). See "Dashboard data" below.
 - **Glance** (always, compact): Claude, CPU, memory with a level bar; yellow/red
   past `Theme.attnClaude/attnCpu/attnMem`. Choose them in `Theme.glance`.
 - **Status group** (network · bluetooth · mic-muted · volume · battery) →
   quick settings panel with one tab per area. Scroll = volume, right click on
   the speaker = mute, middle click = pavucontrol.
-- **Attention area**: only appears when something needs you – updates and
-  disks ≥ 85 % full (`Theme.attnUpdates`, `Theme.attnDisk`).
+- **Attention area**: only appears when something needs you – updates,
+  tasks due today/overdue and disks ≥ 85 % full (`Theme.attnUpdates`,
+  `Theme.attnTasks`, `Theme.attnDisk`).
+- Optional glance item `"wealth"` (portfolio day change) in `Theme.glance`.
 - No tray and no media display (by choice; see tag `qs-9-calm-bar`).
 - **Primary monitor only**: attention, glance, bell. Other monitors show
   workspaces, clock and the status group. Primary = first connected output listed for
   this host in `Theme.primaryOutputs` (YST: HDMI-A-1, DP-1), else the widest
   landscape monitor.
-- `qs ipc call bar-<output> panel <name>`: `dashboard`, `quick:<tab>`
-  (`network`, `bluetooth`, `audio`, `battery`), `system`, `claude`,
-  `updates`.
+- `qs ipc call bar-<output> panel <name>`: `dashboard[:<tab>]` (`today`,
+  `news`, `markets`, `system`), `quick:<tab>` (`network`, `bluetooth`,
+  `audio`, `battery`), `system`, `claude`, `updates`.
+
+## Dashboard data
+
+`config/dashboard.json` (in git) is deep-merged with
+`~/.local/share/quickshell/private.json` (not in git, `chmod 600`; template:
+`config/private.example.json`). Both are watched. Scripts in `scripts/` use
+only the Python standard library (`/usr/bin/python3`).
+
+| Area | Source | Config |
+|---|---|---|
+| Weather | Open-Meteo (no key) via curl | `weather.latitude/longitude/name` |
+| News | RSS/Atom, `scripts/news.py` | `news.feeds[] {name, url, limit?}` |
+| Weather location | `"location": "auto"`: IP geolocation (ipinfo.io / ipwho.is), hourly + on network change, cached | `weather.*` (fixed coordinates = fallback) |
+| Markets | Yahoo Finance chart API, `scripts/markets.py`. `symbol` = Yahoo ticker (`VWCE.DE`, `^GDAXI`, `BTC-EUR`, `EURUSD=X`), ISIN or WKN (resolved via OpenFIGI, Xetra preferred, cached in `~/.cache/quickshell/symbols.json`; check with `markets.py resolve A2PKXG`) | `markets.watchlist`, private: `markets.holdings[] {symbol, quantity, cost?}`, `markets.cash[] {name, amount}` or `{name, actual: "<account>"}` |
+| Crypto from Kraken | Private `Balance` API (key with only *Query Funds*), cached 15 min; coins (incl. staked/earn, e.g. `DOT.S`, `ETH.F`) become holdings priced via Kraken's public OHLC API, fiat becomes cash, dust below `minValue` (1 €) hidden; check with `markets.py kraken` | private: `kraken.apiKey` + `apiSecret` or `apiSecretCommand`, optional `cost {COIN: amount}`, `names`, `ignore[]`, `minValue`, `refreshMinutes` |
+| Cash from Actual Budget | `scripts/actual.mjs` (`@actual-app/api` in `~/.local/share/quickshell/actual`, `npm install @actual-app/api@<server version>`); balances as of the server's last bank sync, cached 30 min; list accounts with `markets.py actual` | `actual.url/budget`, private: `actual.password` (+ `encryptionPassword`) |
+| Tasks | CalDAV VTODO, `scripts/caldav-tasks.py` (list, complete, undo, add) | `tasks.url/calendar`, private: `tasks.username` + `password` or `passwordCommand` |
+
+Quick-add syntax for tasks: `Steuer @fri !` (`@today @tomorrow @mon..@sun
+@+3 @2026-11-03`, `!` = high priority). Completing a recurring task moves its
+due date (simple `FREQ`/`INTERVAL` rules only). Test a script by hand, e.g.
+`/usr/bin/python3 scripts/caldav-tasks.py calendars`.
 
 ## Keyboard navigation (`SUPER+B`)
 
@@ -61,7 +87,8 @@ features: `qs ipc show`.
 | `1`–`9` workspace | `k` at the top / `Esc`: back to the bar |
 
 Jumps: `n` network, `b` bluetooth, `a` audio, `p` power, `d`/`c` dashboard,
-`u` updates, `s` system, `C` Claude, `N` notifications. `q` quits. Text fields
+`u` updates, `s` system, `C` Claude, `N` notifications, `t` today,
+`i` news, `M` markets (`H`/`L` switch dashboard tabs). `q` quits. Text fields
 (Wi-Fi password): just type, `Enter` connects, `Esc` cancels. Targets are any
 visible item with `navigable: true` (`components/BarNavigator.qml`).
 
@@ -79,14 +106,15 @@ visible item with `navigable: true` (`components/BarNavigator.qml`).
 ```
 shell.qml        root: bars + overlays
 Bar.qml          the bar and its panels
-config/          Theme (sizes, timings, idle lock), Colors (wallpaper palette)
+config/          Theme (sizes, timings, idle lock), Colors (wallpaper palette),
+                 dashboard.json (dashboard data sources)
 services/        singletons: data + logic (Net, SysMon, Notifs, Pi, Clip, ...)
 modules/         bar modules
 panels/          panels that slide out of the bar
 overlays/        launcher, power menu, lock, OSD, overview, screenshot, ...
 components/      shared widgets
 data/emoji.tsv   emoji names (generated from Unicode emoji-data)
-scripts/         wall-thumbs.sh (wallpaper thumbnails)
+scripts/         wall-thumbs.sh, dashboard data (news, markets, CalDAV tasks)
 ```
 
 ## Going back

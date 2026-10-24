@@ -41,9 +41,12 @@ Singleton {
     readonly property int attnUpdates: 1        // pending updates >= this
     readonly property int attnDisk: 85          // disk used % >= this
     // glance items: always visible, warning colour from here on
+    // ("wealth" = portfolio value + day change, see config/dashboard.json)
     readonly property var glance: ["claude", "cpu", "mem"]
     readonly property int attnClaude: 70        // Claude usage %
     readonly property int attnCpu: 80           // CPU % (30 s average)
     readonly property int attnMem: 85           // memory used %
+    readonly property int attnTasks: 1          // tasks due today/overdue >= this
+    readonly property bool weatherInBar: true   // weather next to the clock
     readonly property var diskMounts: ["/", "/home", "/media/storage", "/media/data"]
 }

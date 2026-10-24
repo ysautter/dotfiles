@@ -5,7 +5,7 @@ import qs.services
 
 // Glance items: always visible, compact (icon + percent + level bar). They
 // turn yellow / red past the Theme.attn* thresholds instead of popping in.
-// Which ones: Theme.glance ("claude", "cpu", "mem").
+// Which ones: Theme.glance ("claude", "cpu", "mem", "wealth").
 Row {
     id: root
 
@@ -35,6 +35,18 @@ Row {
         tooltip: ClaudeUsage.tooltip
         clickable: true
         onClicked: button => button === Qt.RightButton ? ClaudeUsage.refresh() : root.panelRequested("claude", claude)
+    }
+
+    // ---- portfolio value (opt-in: "wealth" in Theme.glance) -----------------------
+    BarModule {
+        id: wealth
+        shown: Theme.glance.includes("wealth") && Markets.hasPortfolio && Markets.total > 0
+        icon: "\u{f0584}"
+        text: Markets.pct(Markets.dayPct)
+        textColor: Markets.dayChange > 0 ? Colors.good : Markets.dayChange < 0 ? Colors.critical : Colors.fg
+        tooltip: `Portfolio ${Markets.money(Markets.total)}\ntoday ${Markets.money(Markets.dayChange)} (${Markets.pct(Markets.dayPct)})`
+        clickable: true
+        onClicked: button => button === Qt.RightButton ? Markets.refresh() : root.panelRequested("dashboard:markets", wealth)
     }
 
     // ---- CPU ------------------------------------------------------------------------

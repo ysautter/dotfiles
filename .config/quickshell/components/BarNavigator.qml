@@ -18,7 +18,8 @@ import qs.services
 //             (refresh, mute, DND)      k at the top, Esc   back to the bar
 //   j         into the panel            text fields: type, Enter, Esc
 // Jumps (both levels): n network, b bluetooth, a audio, p power,
-//   d / c dashboard, u updates, s system, C Claude, N notifications
+//   d / c dashboard, t today, i news, M markets, u updates, s system,
+//   C Claude, N notifications
 // q quits, Esc steps back.
 //
 // Targets are found generically: any visible item with `navigable: true`.
@@ -42,6 +43,7 @@ Item {
     readonly property var jumps: ({
         "n": "quick:network", "b": "quick:bluetooth", "a": "quick:audio", "p": "quick:battery",
         "d": "dashboard", "c": "dashboard", "u": "updates", "s": "system", "C": "claude",
+        "t": "dashboard:today", "i": "dashboard:news", "M": "dashboard:markets",
     })
 
     // ---- start / stop -------------------------------------------------------------
@@ -185,7 +187,7 @@ Item {
             return;
         }
         // anchor below the module that normally opens it
-        const anchor = name === "dashboard" ? bar.centreBlock : bar.rightBlock;
+        const anchor = name.startsWith("dashboard") ? bar.centreBlock : bar.rightBlock;
         bar.openPanel(name, anchor);
         enterTimer.restart();
     }
@@ -204,6 +206,13 @@ Item {
     }
 
     function switchTab(step) {
+        if (bar.panel === "dashboard") {
+            const dtabs = ["today", "news", "markets", "system"];
+            const di = dtabs.indexOf(bar.dashTab);
+            bar.dashTab = dtabs[(di + step + dtabs.length) % dtabs.length];
+            tabTimer.restart();
+            return;
+        }
         if (bar.panel !== "quick") return;
         const tabs = ["network", "bluetooth", "audio", "battery"].filter(t =>
             t === "network" || t === "audio"

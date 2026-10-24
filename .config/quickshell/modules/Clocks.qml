@@ -3,8 +3,9 @@ import Quickshell.Io
 import QtQuick
 import qs.config
 import qs.components
+import qs.services
 
-// Centre block: weekday | time | date. Click: dashboard.
+// Centre block: weekday | time | date | weather. Click: dashboard.
 Row {
     id: root
 
@@ -37,4 +38,15 @@ Row {
         onClicked: root.panelRequested("dashboard", time)
     }
 
+    BarModule {
+        id: weather
+        shown: Theme.weatherInBar && Weather.valid
+        icon: Weather.icon
+        text: Math.round(Weather.temp) + "°"
+        tooltip: `${Weather.place}: ${Weather.desc}, ${Math.round(Weather.temp)} °C (feels ${Math.round(Weather.feels)} °C)`
+                 + (Weather.daily.length ? `\nToday ${Math.round(Weather.daily[0].min)}–${Math.round(Weather.daily[0].max)} °C`
+                    + (Weather.daily[0].pop >= 20 ? `, rain ${Weather.daily[0].pop} %` : "") : "")
+        clickable: true
+        onClicked: button => button === Qt.RightButton ? Weather.refresh() : root.panelRequested("dashboard:today", time)
+    }
 }
