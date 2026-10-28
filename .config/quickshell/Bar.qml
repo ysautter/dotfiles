@@ -94,7 +94,7 @@ PanelWindow {
         if (["network", "bluetooth", "audio", "battery"].includes(name)) name = "quick:" + name;
         if (name === "calendar") name = "dashboard:today";
         if (["weather", "tasks"].includes(name)) name = "dashboard:today";
-        if (["news", "markets"].includes(name)) name = "dashboard:" + name;
+        if (["news", "markets", "work"].includes(name)) name = "dashboard:" + name;
         if (name === "dashboard" && panel !== "dashboard") dashTab = "today";
         if (name.startsWith("dashboard:")) {
             const tab = name.slice(10);
@@ -238,7 +238,7 @@ PanelWindow {
     Tooltip {
         target: centre
         hovered: bar.navActive && bar.panel === ""
-        text: "h/l move · ⏎ open · j into panel · r/m alt action · 1-9 workspace\nn net · b bt · a audio · p power · d dashboard · t today · i news · M markets · u updates · s system · C claude · N notifs · q quit"
+        text: "h/l move · ⏎ open · j into panel · r/m alt action · 1-9 workspace\nn net · b bt · a audio · p power · d dashboard · t today · i news · M markets · w work · u updates · s system · C claude · N notifs · q quit"
     }
 
     // ---- panels ---------------------------------------------------------------------------

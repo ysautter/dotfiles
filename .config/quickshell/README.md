@@ -36,7 +36,8 @@ features: `qs ipc show`.
 
 - **Clock** (weekday · time · date · weather) → dashboard with tabs:
   **Today** (calendar, weather, CalDAV tasks), **News** (RSS/Atom),
-  **Markets** (portfolio + watchlist), **System** (CPU/memory, disks,
+  **Markets** (portfolio + watchlist), **Work** (GitLab milestone: what is
+  in my hands vs. the others), **System** (CPU/memory, disks,
   Claude, updates). See "Dashboard data" below.
 - **Glance** (always, compact): Claude, CPU, memory with a level bar; yellow/red
   past `Theme.attnClaude/attnCpu/attnMem`. Choose them in `Theme.glance`.
@@ -47,7 +48,7 @@ features: `qs ipc show`.
   quick settings panel with one tab per area. Scroll = volume, right click on
   the speaker = mute, middle click = pavucontrol.
 - **Attention area**: only appears when something needs you – updates,
-  tasks due today/overdue and disks ≥ 85 % full (`Theme.attnUpdates`,
+  tasks due today/overdue, GitLab MRs waiting for my review (`Theme.attnReviews`) and disks ≥ 85 % full (`Theme.attnUpdates`,
   `Theme.attnTasks`, `Theme.attnDisk`).
 - Optional glance item `"wealth"` (portfolio day change) in `Theme.glance`.
 - No tray and no media display (by choice; see tag `qs-9-calm-bar`).
@@ -56,7 +57,7 @@ features: `qs ipc show`.
   this host in `Theme.primaryOutputs` (YST: HDMI-A-1, DP-1), else the widest
   landscape monitor.
 - `qs ipc call bar-<output> panel <name>`: `dashboard[:<tab>]` (`today`,
-  `news`, `markets`, `system`), `quick:<tab>` (`network`, `bluetooth`,
+  `news`, `markets`, `work`, `system`), `quick:<tab>` (`network`, `bluetooth`,
   `audio`, `battery`), `system`, `claude`, `updates`.
 - **UI scale**: everything (fonts, bar, panels, overlays) scales with
   `Theme.uiScale`: `$QS_SCALE`, else this host in `Theme.uiScales`
@@ -79,6 +80,7 @@ only the Python standard library (`/usr/bin/python3`).
 | Crypto from Kraken | Private `Balance` API (key with only *Query Funds*), cached 15 min; coins (incl. staked/earn, e.g. `DOT.S`, `ETH.F`) become holdings priced via Kraken's public OHLC API, fiat becomes cash, dust below `minValue` (1 €) hidden; check with `markets.py kraken` | private: `kraken.apiKey` + `apiSecret` or `apiSecretCommand`, optional `cost {COIN: amount}`, `names`, `ignore[]`, `minValue`, `refreshMinutes` |
 | Cash from Actual Budget | `scripts/actual.mjs` (`@actual-app/api` in `~/.local/share/quickshell/actual`, `npm install @actual-app/api@<server version>`); balances as of the server's last bank sync, cached 30 min; list accounts with `markets.py actual` | `actual.url/budget`, private: `actual.password` (+ `encryptionPassword`) |
 | Tasks | CalDAV VTODO, `scripts/caldav-tasks.py` (list, complete, undo, add) | `tasks.url/calendar`, private: `tasks.username` + `password` or `passwordCommand` |
+| Work (GitLab) | `scripts/gitlab-milestone.py` via `glab api` (its login) or `token`/`tokenCommand`; open issues + MRs (milestone or target `rc/<milestone>`) per person: issues → assignees, draft MRs and MRs without reviewer → assignee, ready MRs → reviewers who have not reviewed yet, reviewed → assignee ("merge"). Milestone picked in the tab is kept in the state dir; test with `gitlab-milestone.py list 1.1.0` | `gitlab.host/group/milestone/refreshMinutes`, optional `user` |
 | Translate | `scripts/translate.py`: MyMemory (no key), pi (LLM), LibreTranslate (self-hosted), DeepL (key) | `translate.*` |
 
 Quick-add syntax for tasks: `Steuer @fri !` (`@today @tomorrow @mon..@sun
@@ -97,7 +99,7 @@ due date (simple `FREQ`/`INTERVAL` rules only). Test a script by hand, e.g.
 
 Jumps: `n` network, `b` bluetooth, `a` audio, `p` power, `d`/`c` dashboard,
 `u` updates, `s` system, `C` Claude, `N` notifications, `t` today,
-`i` news, `M` markets (`H`/`L` switch dashboard tabs). `q` quits. Text fields
+`i` news, `M` markets, `w` work (`H`/`L` switch dashboard tabs). `q` quits. Text fields
 (Wi-Fi password): just type, `Enter` connects, `Esc` cancels. Targets are any
 visible item with `navigable: true` (`components/BarNavigator.qml`).
 

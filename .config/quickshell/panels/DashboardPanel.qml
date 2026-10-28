@@ -7,6 +7,7 @@ import qs.services
 //   Today    calendar | weather | tasks
 //   News     RSS/Atom headlines
 //   Markets  portfolio + watchlist
+//   Work     GitLab milestone: in my hands | others
 //   System   system + disks | Claude | updates
 // `qs ipc call bar-<output> panel dashboard:<tab>` opens a tab directly.
 Column {
@@ -22,6 +23,7 @@ Column {
         { name: "today",   icon: "\uf073",    label: "Today" },
         { name: "news",    icon: "\u{f0395}", label: "News" + (News.unread > 0 ? `  ${News.unread}` : "") },
         { name: "markets", icon: "\u{f0535}", label: "Markets" },
+        { name: "work",    icon: "\uf296",    label: "Work" + (GitLab.mine.length > 0 ? `  ${GitLab.mine.length}` : "") },
         { name: "system",  icon: "\uf2db",    label: "System" },
     ]
 
@@ -56,6 +58,8 @@ Column {
     NewsPanel { visible: root.tab === "news"; active: root.open && visible }
 
     MarketsPanel { visible: root.tab === "markets" }
+
+    WorkPanel { visible: root.tab === "work"; active: root.open && visible }
 
     Row {
         id: system

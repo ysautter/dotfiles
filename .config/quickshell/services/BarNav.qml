@@ -7,7 +7,7 @@ import QtQuick
 // `qs ipc call barnav toggle` (SUPER+B): keyboard navigation on the bar of
 // the focused monitor. `qs ipc call barnav jump <name>` opens a panel
 // directly in navigation mode (network, bluetooth, audio, power, dashboard,
-// updates, system, claude, dashboard:<today|news|markets|system>).
+// updates, system, claude, dashboard:<today|news|markets|work|system>).
 Singleton {
     id: root
 

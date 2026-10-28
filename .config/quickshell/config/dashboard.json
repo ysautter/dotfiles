@@ -51,6 +51,14 @@
     "refreshMinutes": 5
   },
 
+  "gitlab": {
+    "_comment": "Work tab: open issues/MRs of a group milestone, who has what (scripts/gitlab-milestone.py). Auth via glab, or token/tokenCommand in private.json. The panel can switch the milestone.",
+    "host": "git.groupios.com",
+    "group": "ems",
+    "milestone": "1.1.0",
+    "refreshMinutes": 10
+  },
+
   "translate": {
     "backend": "mymemory",
     "backends": ["mymemory", "pi"],

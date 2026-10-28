@@ -4,7 +4,7 @@ import qs.components
 import qs.services
 
 // Attention area: items that only appear when they need you (pending updates,
-// tasks due today/overdue, disks past Theme.attnDisk). They slide in/out via BarModule's `shown`.
+// tasks due today/overdue, GitLab MRs waiting for my review, disks past Theme.attnDisk). They slide in/out via BarModule's `shown`.
 Row {
     id: root
 
@@ -35,6 +35,18 @@ Row {
         tooltip: Tasks.visibleTasks.filter(t => Tasks.isOverdue(t) || Tasks.isDueToday(t)).slice(0, 15)
                      .map(t => `${t.summary}  (${Tasks.dueText(t)})`).join("\n")
         onClicked: button => button === Qt.RightButton ? Tasks.refresh() : root.panelRequested("dashboard:today", tasks)
+    }
+
+    // ---- GitLab MRs of the milestone waiting for my review ------------------------------
+    BarModule {
+        id: reviews
+        shown: GitLab.myReviews.length >= Theme.attnReviews
+        icon: "\uf407"
+        text: GitLab.myReviews.length
+        textColor: Colors.warning
+        clickable: true
+        tooltip: `Review (${GitLab.milestone}):\n` + GitLab.myReviews.slice(0, 15).map(i => `${i.ref}  ${i.title}`).join("\n")
+        onClicked: button => button === Qt.RightButton ? GitLab.refresh() : root.panelRequested("dashboard:work", reviews)
     }
 
     // ---- disks that are filling up -------------------------------------------------
