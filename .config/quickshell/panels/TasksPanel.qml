@@ -39,6 +39,7 @@ Column {
 
         TextInput {
             id: input
+            readonly property bool navigable: true
             anchors.fill: parent
             anchors.leftMargin: Theme.s(8)
             anchors.rightMargin: Theme.s(8)
