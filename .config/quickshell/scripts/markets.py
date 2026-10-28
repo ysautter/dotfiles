@@ -58,7 +58,9 @@ def quote(symbol):
         err = j.get("chart", {}).get("error") or {}
         raise ValueError(err.get("description", "no data"))
     meta = res["meta"]
-    closes = [c for c in (res.get("indicators", {}).get("quote") or [{}])[0].get("close", []) if c is not None]
+    ind = (res.get("indicators", {}).get("quote") or [{}])[0]
+    closes = [c for c in ind.get("close", []) if c is not None]
+    volumes = [v for v in ind.get("volume", []) if v is not None][-10:]
     price = meta.get("regularMarketPrice") or (closes[-1] if closes else 0)
     prev = closes[-2] if len(closes) >= 2 else meta.get("chartPreviousClose") or price
     currency = meta.get("currency") or ""
@@ -77,6 +79,8 @@ def quote(symbol):
         "spark": [c * scale for c in closes],
         "time": meta.get("regularMarketTime", 0),
         "type": meta.get("instrumentType", ""),
+        # dead listings (e.g. Yahoo's MWRD.DE): stale closes, no volume
+        "traded": sum(1 for v in volumes if v) >= len(volumes) / 2,
     }
 
 
@@ -126,15 +130,25 @@ def resolve(ident):
                     candidates.append(t)
     if id_type == "ID_ISIN":
         candidates.append(None)                  # last resort: Yahoo search knows some ISINs
+    fallback = None
     for t in candidates:
         try:
             t = t or yahoo_search(ident)
-            if t and quote(t):
-                cache[ident] = t
-                _save(SYMBOLS_CACHE, cache)
-                return t
+            if not t:
+                continue
+            q = quote(t)
+            if not q["traded"]:             # dead listing: only if nothing better
+                fallback = fallback or t
+                continue
+            cache[ident] = t
+            _save(SYMBOLS_CACHE, cache)
+            return t
         except Exception:  # noqa: BLE001 - try the next listing
             continue
+    if fallback:
+        cache[ident] = fallback
+        _save(SYMBOLS_CACHE, cache)
+        return fallback
     raise ValueError(f"cannot resolve {ident} to a Yahoo ticker")
 
 
