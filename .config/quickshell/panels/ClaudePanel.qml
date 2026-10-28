@@ -3,7 +3,8 @@ import qs.config
 import qs.components
 import qs.services
 
-// Claude usage: 5 h session + 7 d weekly limits with reset times.
+// Claude usage per subscription (pi anthropic-accounts): 5 h session +
+// 7 d weekly limits with reset times. The active account comes first.
 Column {
     id: root
     width: parent.width
@@ -62,11 +63,68 @@ Column {
         font.pixelSize: Theme.fontSize + 1
     }
 
-    UsageBar { title: "Session (5 h)"; pct: ClaudeUsage.sessionPct; reset: ClaudeUsage.sessionReset }
-    UsageBar { title: "Weekly (7 d)"; pct: ClaudeUsage.weeklyPct; reset: ClaudeUsage.weeklyReset }
+    Repeater {
+        model: ClaudeUsage.accounts
+        delegate: Column {
+            id: acc
+            required property var modelData
+            required property int index
+            width: root.width
+            spacing: Theme.s(8)
+
+            Rectangle {   // separator between accounts
+                visible: acc.index > 0
+                width: parent.width
+                height: 1
+                color: Qt.alpha(Colors.fg, 0.12)
+            }
+            Item {
+                width: parent.width
+                height: Theme.s(18)
+                Text {
+                    id: accName
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: (acc.modelData.active ? "● " : "○ ") + acc.modelData.name
+                    color: acc.modelData.active ? Colors.fg : Qt.alpha(Colors.fg, 0.7)
+                    font.family: Theme.font
+                    font.pixelSize: Theme.fontSize
+                    font.bold: acc.modelData.active
+                }
+                Text {
+                    anchors.right: parent.right
+                    anchors.left: accName.right
+                    anchors.leftMargin: Theme.s(8)
+                    anchors.verticalCenter: parent.verticalCenter
+                    horizontalAlignment: Text.AlignRight
+                    elide: Text.ElideLeft
+                    text: acc.modelData.email ?? ""
+                    color: Qt.alpha(Colors.fg, 0.5)
+                    font.family: Theme.font
+                    font.pixelSize: Theme.fontSize - 2
+                }
+            }
+            UsageBar {
+                visible: !acc.modelData.error
+                title: "Session (5 h)"; pct: acc.modelData.sessionPct; reset: acc.modelData.sessionReset
+            }
+            UsageBar {
+                visible: !acc.modelData.error
+                title: "Weekly (7 d)"; pct: acc.modelData.weeklyPct; reset: acc.modelData.weeklyReset
+            }
+            Text {
+                visible: !!acc.modelData.error
+                width: parent.width
+                text: acc.modelData.error
+                wrapMode: Text.Wrap
+                color: Colors.critical
+                font.family: Theme.font
+                font.pixelSize: Theme.fontSize - 2
+            }
+        }
+    }
 
     Text {
-        visible: ClaudeUsage.cls === "error"
+        visible: ClaudeUsage.accounts.length === 0 && ClaudeUsage.cls === "error"
         width: root.width
         text: ClaudeUsage.tooltip
         wrapMode: Text.Wrap

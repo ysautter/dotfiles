@@ -40,6 +40,9 @@ features: `qs ipc show`.
   Claude, updates). See "Dashboard data" below.
 - **Glance** (always, compact): Claude, CPU, memory with a level bar; yellow/red
   past `Theme.attnClaude/attnCpu/attnMem`. Choose them in `Theme.glance`.
+  Claude shows the session usage of every subscription saved by the pi
+  `anthropic-accounts` extension (active one first, colour follows it); the
+  Claude panel has session + weekly per account (`scripts/claude-accounts.py`).
 - **Status group** (network · bluetooth · mic-muted · volume · battery) →
   quick settings panel with one tab per area. Scroll = volume, right click on
   the speaker = mute, middle click = pavucontrol.
