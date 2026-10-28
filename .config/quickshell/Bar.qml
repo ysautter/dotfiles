@@ -68,6 +68,15 @@ PanelWindow {
         }
     }
 
+    // clicking a link in a panel (news, gitlab, markets) closes it
+    Connections {
+        target: HyprState
+        function onLinkOpened() {
+            bar.panel = "";
+            if (bar.navActive) navigator.stop();
+        }
+    }
+
     // like togglePanel, but never closes
     function openPanel(name, anchor) {
         if (["network", "bluetooth", "audio", "battery"].includes(name)) name = "quick:" + name;

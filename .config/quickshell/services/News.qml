@@ -21,7 +21,7 @@ Singleton {
 
     function refresh() { if (!proc.running) proc.running = true; }
     function markSeen() { seen.lastSeen = Math.floor(Date.now() / 1000); }
-    function open(link) { if (link) Quickshell.execDetached(["xdg-open", link]); }
+    function open(link) { HyprState.openUrl(link); }
 
     Process {
         id: proc

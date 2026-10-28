@@ -86,7 +86,7 @@ Item {
                             required property var modelData
                             required property int index
                             readonly property bool navigable: true
-                            function navActivate() { Quickshell.execDetached(["xdg-open", modelData.url]); }
+                            function navActivate() { HyprState.openUrl(modelData.url); }
                             width: holdCol.width
                             height: Theme.s(26)
                             color: hm.containsMouse ? Qt.alpha(Colors.hover, 0.35) : index % 2 ? Qt.alpha(Colors.fg, 0.04) : "transparent"
@@ -228,7 +228,7 @@ Item {
                         required property var modelData
                         required property int index
                         readonly property bool navigable: true
-                        function navActivate() { Quickshell.execDetached(["xdg-open", "https://finance.yahoo.com/quote/" + modelData.symbol]); }
+                        function navActivate() { HyprState.openUrl("https://finance.yahoo.com/quote/" + modelData.symbol); }
                         readonly property var spark: modelData.spark ?? []
                         readonly property bool up: spark.length > 1 ? spark[spark.length - 1] >= spark[0] : modelData.changePct >= 0
                         width: wlCol.width
