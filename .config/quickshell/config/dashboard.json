@@ -51,12 +51,29 @@
     "refreshMinutes": 5
   },
 
+  "calendar": {
+    "_comment": "Calendar tab + month dots + agenda (scripts/caldav-events.py). Server/credentials from tasks (or url here). calendars: only these names (empty = all), exclude: names to skip (default: the task list), colors: {name: \"#rrggbb\"}. workdays: ISO weekdays (1 = Monday), the rest is shaded. remindMinutes: bar item before an event.",
+    "weeks": 4,
+    "workdays": [1, 2, 3, 4],
+    "calendars": [],
+    "colors": {},
+    "remindMinutes": 15,
+    "refreshMinutes": 10
+  },
+
   "gitlab": {
     "_comment": "Work tab: open issues/MRs of a group milestone, who has what (scripts/gitlab-milestone.py). Auth via glab, or token/tokenCommand in private.json. The panel can switch the milestone.",
     "host": "git.groupios.com",
     "group": "ems",
     "milestone": "1.1.0",
     "refreshMinutes": 10
+  },
+
+  "mail": {
+    "_comment": "Mail tab + attention item: Stalwart mail flow via the mailflow CLI (~/Projects/stalwart/mailflow, ssh to mx.sautter.dev). days: per-day chart and list window.",
+    "command": "~/.local/bin/mailflow",
+    "days": 7,
+    "refreshMinutes": 5
   },
 
   "translate": {

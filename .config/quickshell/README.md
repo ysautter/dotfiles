@@ -35,9 +35,14 @@ features: `qs ipc show`.
 ```
 
 - **Clock** (weekday · time · date · weather) → dashboard with tabs:
-  **Today** (calendar, weather, CalDAV tasks), **News** (RSS/Atom),
+  **Today** (month with event dots + today's/tomorrow's events, weather,
+  CalDAV tasks), **Calendar** (2/4/6 weeks of CalDAV events, Monday first,
+  all-day/multi-day events as bars, non-workdays shaded; wheel or ‹ › move a
+  week, clicking a day in the month opens its week), **News** (RSS/Atom),
   **Markets** (portfolio + watchlist), **Work** (GitLab milestone: what is
-  in my hands vs. the others), **System** (CPU/memory, disks,
+  in my hands vs. the others), **Mail** (Stalwart mail flow: in/out/rejected
+  messages, 7-day chart, click a message for its recipients, checks and full
+  event trace), **System** (CPU/memory, disks,
   Claude, updates). See "Dashboard data" below.
 - **Glance** (always, compact): Claude, CPU, memory with a level bar; yellow/red
   past `Theme.attnClaude/attnCpu/attnMem`. Choose them in `Theme.glance`.
@@ -48,7 +53,9 @@ features: `qs ipc show`.
   quick settings panel with one tab per area. Scroll = volume, right click on
   the speaker = mute, middle click = pavucontrol.
 - **Attention area**: only appears when something needs you – updates,
-  tasks due today/overdue, GitLab MRs waiting for my review (`Theme.attnReviews`) and disks ≥ 85 % full (`Theme.attnUpdates`,
+  the next calendar event (`calendar.remindMinutes` before it starts),
+  tasks due today/overdue, GitLab MRs waiting for my review (`Theme.attnReviews`), deferred/bounced mail on the
+  Stalwart server (`Theme.attnMail`) and disks ≥ 85 % full (`Theme.attnUpdates`,
   `Theme.attnTasks`, `Theme.attnDisk`).
 - Optional glance item `"wealth"` (portfolio day change) in `Theme.glance`.
 - No tray and no media display (by choice; see tag `qs-9-calm-bar`).
@@ -57,8 +64,10 @@ features: `qs ipc show`.
   this host in `Theme.primaryOutputs` (YST: HDMI-A-1, DP-1), else the widest
   landscape monitor.
 - `qs ipc call bar-<output> panel <name>`: `dashboard[:<tab>]` (`today`,
-  `news`, `markets`, `work`, `system`), `quick:<tab>` (`network`, `bluetooth`,
+  `calendar`, `news`, `markets`, `work`, `mail`, `system`), `quick:<tab>` (`network`, `bluetooth`,
   `audio`, `battery`), `system`, `claude`, `updates`.
+  `qs ipc call calendar week <YYYY-MM-DD>|next|prev|today` moves the Calendar tab.
+  Events can be created, edited and deleted there (see "Keyboard navigation").
 - **UI scale**: everything (fonts, bar, panels, overlays) scales with
   `Theme.uiScale`: `$QS_SCALE`, else this host in `Theme.uiScales`
   (yss3l: 1.2), else `Theme.uiScaleDefault` (1.0). Sizes in QML are written
@@ -80,7 +89,9 @@ only the Python standard library (`/usr/bin/python3`).
 | Crypto from Kraken | Private `Balance` API (key with only *Query Funds*), cached 15 min; coins (incl. staked/earn, e.g. `DOT.S`, `ETH.F`) become holdings priced via Kraken's public OHLC API, fiat becomes cash, dust below `minValue` (1 €) hidden; check with `markets.py kraken` | private: `kraken.apiKey` + `apiSecret` or `apiSecretCommand`, optional `cost {COIN: amount}`, `names`, `ignore[]`, `minValue`, `refreshMinutes` |
 | Cash from Actual Budget | `scripts/actual.mjs` (`@actual-app/api` in `~/.local/share/quickshell/actual`, `npm install @actual-app/api@<server version>`); balances as of the server's last bank sync, cached 30 min; list accounts with `markets.py actual` | `actual.url/budget`, private: `actual.password` (+ `encryptionPassword`) |
 | Tasks | CalDAV VTODO, `scripts/caldav-tasks.py` (list, complete, undo, add) | `tasks.url/calendar`, private: `tasks.username` + `password` or `passwordCommand` |
+| Calendar | CalDAV VEVENT of all calendars except the task list, `scripts/caldav-events.py` (server expands recurrences); loads the shown weeks ± margin, cached discovery (`~/.cache/quickshell/caldav-calendars.json`); test with `caldav-events.py list 2026-11-02 28`; writes via `create` / `update` / `delete` / `restore` (updates keep the event's TZID, recurring series are refused) | `calendar.weeks/workdays/calendars/exclude/colors/defaultCalendar/remindMinutes/refreshMinutes`; server + credentials from `tasks` (or `calendar.url`) |
 | Work (GitLab) | `scripts/gitlab-milestone.py` via `glab api` (its login) or `token`/`tokenCommand`; open issues + MRs (milestone or target `rc/<milestone>`) per person: issues → assignees, draft MRs and MRs without reviewer → assignee, ready MRs → reviewers who have not reviewed yet, reviewed → assignee ("merge"). Milestone picked in the tab is kept in the state dir; test with `gitlab-milestone.py list 1.1.0` | `gitlab.host/group/milestone/refreshMinutes`, optional `user` |
+| Mail (Stalwart) | `mailflow` CLI (`~/Projects/stalwart/mailflow`, own README): reads the Stalwart event log on mx.sautter.dev over ssh (agent key, BatchMode). `mailflow summary` for the tab, `mailflow trace <queueId> --json` when a message is clicked; test with `mailflow summary \| jq .today` | `mail.command/days/refreshMinutes`, `enabled: false` to switch off |
 | Translate | `scripts/translate.py`: MyMemory (no key), pi (LLM), LibreTranslate (self-hosted), DeepL (key) | `translate.*` |
 
 Quick-add syntax for tasks: `Steuer @fri !` (`@today @tomorrow @mon..@sun
@@ -99,15 +110,26 @@ due date (simple `FREQ`/`INTERVAL` rules only). Test a script by hand, e.g.
 
 Jumps: `n` network, `b` bluetooth, `a` audio, `p` power, `d`/`c` dashboard,
 `u` updates, `s` system, `C` Claude, `N` notifications, `t` today,
-`i` news, `M` markets, `w` work (`H`/`L` switch dashboard tabs). `q` quits. Text fields
-(Wi-Fi password): just type, `Enter` connects, `Esc` cancels. Targets are any
-visible item with `navigable: true` (`components/BarNavigator.qml`).
+`e` calendar, `i` news, `M` markets, `w` work, `E` mail (`H`/`L` switch dashboard tabs). `q` quits. Text fields
+(Wi-Fi password, forms): just type, `Enter` confirms, `Esc` cancels, `Tab`/`Shift+Tab`
+next/previous field, `←`/`→` move the cursor. Targets are any
+visible item with `navigable: true` (`components/BarNavigator.qml`); panels can
+add `navMove` / `navKey` / `navEscape` / `navFallback` hooks (see its header).
+
+Calendar tab (`e`): `h j k l` walk days and their events (`j` past the last
+week scrolls on), `J`/`K` next/previous week, `Enter` on a day = new event,
+on an event = edit, `a` new event on that day, `x` delete (Undo button above
+the grid). In the form: `Tab` through the fields, `Enter` saves, `Esc` cancels.
+With the mouse: click an event to edit, double-click a day or "New" to add.
+Recurring events open read-only.
 
 ## Idle lock and Hyprland theming
 
 - **Idle lock**: hypridle (`hypr/hypridle.conf`) runs `qs ipc call lock lock`
   after 15 min. Video in the browser, games (D-Bus screensaver inhibit), any
   Wayland inhibitor and fullscreen windows block it.
+- **Login screen**: the same look as the greetd greeter, with autologin +
+  immediate lock on LUKS machines - see `greeter/README.md`.
 - **Group tab bar**: `services/HyprTheme.qml` gives Hyprland's groupbar the
   bar's colours and font via `hyprctl keyword`, again after wallpaper changes
   and config reloads.
@@ -124,6 +146,7 @@ modules/         bar modules
 panels/          panels that slide out of the bar
 overlays/        launcher, power menu, lock, OSD, overview, screenshot, ...
 components/      shared widgets
+greeter/         greetd login screen (own shell.qml, installed to /etc/greetd)
 data/emoji.tsv   emoji names (generated from Unicode emoji-data)
 scripts/         wall-thumbs.sh, dashboard data (news, markets, CalDAV tasks, translate)
 ```

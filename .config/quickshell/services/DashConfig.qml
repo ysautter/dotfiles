@@ -25,6 +25,8 @@ Singleton {
     readonly property var tasks: cfg.tasks ?? {}
     readonly property var translate: cfg.translate ?? {}
     readonly property var gitlab: cfg.gitlab ?? {}
+    readonly property var calendar: cfg.calendar ?? {}
+    readonly property var mail: cfg.mail ?? {}
 
     // bumped whenever a file changes, so services can refetch
     property int generation: 0

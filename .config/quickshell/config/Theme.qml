@@ -70,6 +70,7 @@ Singleton {
     readonly property int attnMem: 85           // memory used %
     readonly property int attnTasks: 1          // tasks due today/overdue >= this
     readonly property int attnReviews: 1        // GitLab MRs waiting for my review >= this
+    readonly property int attnMail: 1           // deferred/bounced mail on the Stalwart server >= this
     readonly property bool weatherInBar: true   // weather next to the clock
     readonly property var diskMounts: ["/", "/home", "/media/storage", "/media/data"]
 }

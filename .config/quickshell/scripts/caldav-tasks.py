@@ -12,98 +12,26 @@
 Config "tasks": {url, calendar}; credentials "tasks": {username, password} or
 {username, passwordCommand} belong in ~/.local/share/quickshell/private.json.
 """
-import base64
 import calendar
 import json
 import os
 import re
-import subprocess
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
-from datetime import date, datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
+from datetime import date, timedelta, timezone
 
 import qsconf
+import caldav
+from caldav import (CACHE_DIR, NS, Client, Fail, calendars, epoch_ms, escape, fold, href_of,
+                    parse_dt, split_prop, unescape, unfold, utcstamp)
 
-NS = {"d": "DAV:", "c": "urn:ietf:params:xml:ns:caldav", "cs": "http://calendarserver.org/ns/"}
-CACHE = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")),
-                     "quickshell", "caldav.json")
-
-
-class Fail(Exception):
-    pass
+CACHE = os.path.join(CACHE_DIR, "caldav.json")
 
 
-# ---- HTTP -------------------------------------------------------------------------
-class Client:
-    def __init__(self, cfg):
-        user = cfg.get("username", "")
-        pw = cfg.get("password", "")
-        if not pw and cfg.get("passwordCommand"):
-            pw = subprocess.run(cfg["passwordCommand"], shell=True, capture_output=True,
-                                text=True, check=True).stdout.rstrip("\n")
-        if not user or not pw:
-            raise Fail("no CalDAV credentials: set tasks.username/password in "
-                       "~/.local/share/quickshell/private.json")
-        self.auth = "Basic " + base64.b64encode(f"{user}:{pw}".encode()).decode()
-
-    def request(self, method, url, body=None, headers=None, depth=None, _hops=0):
-        h = {"Authorization": self.auth, "User-Agent": qsconf.UA}
-        if body is not None:
-            h["Content-Type"] = "application/xml; charset=utf-8" if body.lstrip().startswith(b"<") \
-                else "text/calendar; charset=utf-8"
-        if depth is not None:
-            h["Depth"] = str(depth)
-        h.update(headers or {})
-        req = urllib.request.Request(url, data=body, method=method, headers=h)
-        try:
-            with urllib.request.urlopen(req, timeout=20) as r:
-                return r.status, dict(r.headers), r.read()
-        except urllib.error.HTTPError as e:
-            # urllib does not follow redirects for PROPFIND/REPORT
-            if e.code in (301, 302, 307, 308) and _hops < 5 and e.headers.get("Location"):
-                return self.request(method, urllib.parse.urljoin(url, e.headers["Location"]),
-                                    body, headers, depth, _hops + 1)
-            if e.code == 401:
-                raise Fail("CalDAV: authentication failed (401)") from None
-            raise Fail(f"CalDAV {method} {url}: HTTP {e.code}") from None
-        except urllib.error.URLError as e:
-            raise Fail(f"CalDAV: {e.reason}") from None
-
-    def propfind(self, url, props, depth=0):
-        body = ('<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" '
-                'xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/">'
-                f'<d:prop>{props}</d:prop></d:propfind>').encode()
-        _, _, data = self.request("PROPFIND", url, body, depth=depth)
-        return ET.fromstring(data)
-
-
-def href_of(resp, base):
-    return urllib.parse.urljoin(base, resp.findtext("d:href", "", NS))
-
-
-# ---- discovery ----------------------------------------------------------------------
 def task_lists(cli, url):
-    root = cli.propfind(url, "<d:current-user-principal/>")
-    p = root.find(".//d:current-user-principal/d:href", NS)
-    principal = urllib.parse.urljoin(url, p.text) if p is not None else url
-    root = cli.propfind(principal, "<c:calendar-home-set/>")
-    h = root.find(".//c:calendar-home-set/d:href", NS)
-    home = urllib.parse.urljoin(principal, h.text) if h is not None else principal
-    root = cli.propfind(home, "<d:displayname/><d:resourcetype/><c:supported-calendar-component-set/>", 1)
-    out = []
-    for r in root.findall("d:response", NS):
-        if r.find(".//d:resourcetype/c:calendar", NS) is None:
-            continue
-        comps = [c.get("name") for c in r.findall(".//c:supported-calendar-component-set/c:comp", NS)]
-        href = href_of(r, home)
-        name = r.findtext(".//d:displayname", "", NS) or href.rstrip("/").rsplit("/", 1)[-1]
-        out.append({"href": href, "name": name, "todo": not comps or "VTODO" in comps})
-    return out
+    return [{k: c[k] for k in ("href", "name", "todo")} for c in calendars(cli, url)]
 
 
 def collection(cli, cfg, refresh=False):
@@ -130,66 +58,8 @@ def collection(cli, cfg, refresh=False):
 
 
 # ---- iCalendar ------------------------------------------------------------------------
-def unfold(text):
-    return re.sub(r"\r?\n[ \t]", "", text).replace("\r\n", "\n").split("\n")
-
-
-def fold(line):
-    out, b = [], line.encode()
-    while len(b) > 75:
-        cut = 75 if not out else 74
-        while cut > 0 and (b[cut] & 0xC0) == 0x80:   # don't split UTF-8 sequences
-            cut -= 1
-        out.append(b[:cut].decode())
-        b = b[cut:]
-    out.append(b.decode())
-    return "\r\n ".join(out)
-
-
-def split_prop(line):
-    m = re.match(r"([^:;]+)((?:;[^:]*)?):(.*)", line)
-    if not m:
-        return None, {}, ""
-    params = {}
-    for p in filter(None, m.group(2).split(";")):
-        k, _, v = p.partition("=")
-        params[k.upper()] = v.strip('"')
-    return m.group(1).upper(), params, m.group(3)
-
-
-def unescape(v):
-    return re.sub(r"\\([\\;,nN])", lambda m: "\n" if m.group(1) in "nN" else m.group(1), v)
-
-
-def escape(v):
-    return v.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
-
-
-def parse_dt(value, params):
-    """-> (datetime aware or date, all_day)"""
-    if params.get("VALUE") == "DATE" or re.fullmatch(r"\d{8}", value):
-        return datetime.strptime(value[:8], "%Y%m%d").date(), True
-    dt = datetime.strptime(value[:15], "%Y%m%dT%H%M%S")
-    if value.endswith("Z"):
-        return dt.replace(tzinfo=timezone.utc), False
-    try:
-        return dt.replace(tzinfo=ZoneInfo(params["TZID"])) if "TZID" in params else dt.astimezone(), False
-    except Exception:  # noqa: BLE001 - unknown TZID: treat as local time
-        return dt.astimezone(), False
-
-
-def epoch_ms(d):
-    if isinstance(d, datetime):
-        return int(d.timestamp() * 1000)
-    return int(datetime(d.year, d.month, d.day).astimezone().timestamp() * 1000)
-
-
 def todo_block(lines):
-    try:
-        s = lines.index("BEGIN:VTODO")
-        return s, lines.index("END:VTODO", s)
-    except ValueError:
-        return None, None
+    return caldav.block(lines, "VTODO")
 
 
 def parse_todo(text, href, etag):
@@ -235,25 +105,9 @@ def parse_todo(text, href, etag):
     return t
 
 
-def utcstamp():
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-
-
 def set_props(lines, changes):
     """changes: {NAME: full line or None (remove)} inside the VTODO block"""
-    s, e = todo_block(lines)
-    out, depth = lines[:s + 1], 0
-    for line in lines[s + 1:e]:
-        if line.startswith("BEGIN:"):
-            depth += 1
-        elif line.startswith("END:"):
-            depth -= 1
-        name = split_prop(line)[0]
-        if depth == 0 and name in changes:
-            continue
-        out.append(line)
-    out += [v for v in changes.values() if v]
-    return out + lines[e:]
+    return caldav.set_props(lines, changes, "VTODO")
 
 
 def advance(lines, rrule):

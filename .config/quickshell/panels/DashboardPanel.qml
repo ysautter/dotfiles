@@ -4,10 +4,12 @@ import qs.components
 import qs.services
 
 // Dashboard (click the clock), one tab per area:
-//   Today    calendar | weather | tasks
+//   Today    month + today's events | weather | tasks
+//   Calendar several weeks of CalDAV events
 //   News     RSS/Atom headlines
 //   Markets  portfolio + watchlist
 //   Work     GitLab milestone: in my hands | others
+//   Mail     Stalwart mail flow: messages | per day / trace
 //   System   system + disks | Claude | updates
 // `qs ipc call bar-<output> panel dashboard:<tab>` opens a tab directly.
 Column {
@@ -19,11 +21,19 @@ Column {
     property string tab: "today"
     signal tabRequested(string name)
 
+    onOpenChanged: if (open) Events.resetView()
+    function showWeek(day) {
+        Events.showWeekOf(day);
+        tabRequested("calendar");
+    }
+
     readonly property var tabs: [
         { name: "today",   icon: "\uf073",    label: "Today" },
+        { name: "calendar", icon: "\uf133",   label: "Calendar" },
         { name: "news",    icon: "\u{f0395}", label: "News" + (News.unread > 0 ? `  ${News.unread}` : "") },
         { name: "markets", icon: "\u{f0535}", label: "Markets" },
         { name: "work",    icon: "\uf296",    label: "Work" + (GitLab.mine.length > 0 ? `  ${GitLab.mine.length}` : "") },
+        { name: "mail",    icon: "\uf0e0",    label: "Mail" + (Mail.problems.length > 0 ? `  ${Mail.problems.length}` : "") },
         { name: "system",  icon: "\uf2db",    label: "System" },
     ]
 
@@ -50,16 +60,25 @@ Column {
         spacing: Theme.s(20)
         readonly property real colWidth: (width - spacing * 2) / 3
 
-        Column { width: today.colWidth; spacing: Theme.s(10); CalendarPanel { active: root.open } }
+        Column {
+            width: today.colWidth
+            spacing: Theme.s(10)
+            CalendarPanel { active: root.open; onDayPicked: day => root.showWeek(day) }
+            AgendaPanel { onWeekPicked: day => root.showWeek(day) }
+        }
         Column { width: today.colWidth; spacing: Theme.s(10); WeatherPanel {} }
         Column { width: today.colWidth; spacing: Theme.s(10); TasksPanel {} }
     }
+
+    WeeksPanel { visible: root.tab === "calendar"; active: root.open && visible }
 
     NewsPanel { visible: root.tab === "news"; active: root.open && visible }
 
     MarketsPanel { visible: root.tab === "markets" }
 
     WorkPanel { visible: root.tab === "work"; active: root.open && visible }
+
+    MailPanel { visible: root.tab === "mail"; active: root.open && visible }
 
     Row {
         id: system

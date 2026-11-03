@@ -13,6 +13,10 @@ import qs.services
 // If quickshell crashes while locked, Hyprland allows a new lock client
 // (misc:allow_session_lock_restore in hypr/quickshell.conf): run `hyprlock`
 // from a TTY (Ctrl+Alt+F3) to unlock.
+// Locks right after login when started with QS_AUTOLOCK=1 (greetd autologin,
+// see greeter/README.md) - once per login, not on every quickshell restart.
+// Every lock also copies wallpaper + colours for the login screen
+// (scripts/greeter-sync.sh).
 Scope {
     id: root
 
@@ -29,6 +33,7 @@ Scope {
         error = "";
         wallProc.running = true;
         sessionLock.locked = true;
+        Quickshell.execDetached([Quickshell.shellDir + "/scripts/greeter-sync.sh"]);
     }
 
     function submit() {
@@ -37,11 +42,23 @@ Scope {
         pam.start();
     }
 
-    Component.onCompleted: Session.lockHandler = lock
+    Component.onCompleted: {
+        Session.lockHandler = lock;
+        if (Quickshell.env("QS_AUTOLOCK") === "1") autoLockProc.running = true;
+    }
+
+    // first start in this login session (marker in $XDG_RUNTIME_DIR)?
+    Process {
+        id: autoLockProc
+        command: ["sh", "-c", "m=\"${XDG_RUNTIME_DIR:-/tmp}/qs-autolocked\"; [ -e \"$m\" ] || { touch \"$m\"; echo lock; }"]
+        stdout: StdioCollector { onStreamFinished: if (text.trim() === "lock") root.lock() }
+    }
 
     Process {
         id: wallProc
-        command: ["sh", "-c", "awww query 2>/dev/null | sed -n 's/.*image: //p' | head -1"]
+        // fallback: the copy for the login screen (awww is not up yet right after an autologin)
+        command: ["sh", "-c", "w=$(awww query 2>/dev/null | sed -n 's/.*image: //p' | head -1); "
+            + "[ -n \"$w\" ] || w=/var/lib/qs-greeter/$USER/wallpaper; [ -f \"$w\" ] && echo \"$w\""]
         stdout: StdioCollector { onStreamFinished: root.wallpaper = text.trim() }
     }
 
@@ -75,7 +92,7 @@ Scope {
 
         WlSessionLockSurface {
             color: Colors.background
-            LockContent { lock: root }
+            LockContent { lock: root; extras: [LockMedia {}] }
         }
     }
 
@@ -92,6 +109,7 @@ Scope {
             LockContent {
                 lock: root
                 preview: true
+                extras: [LockMedia {}]
                 focus: true
                 Keys.onPressed: root.previewOpen = false
                 MouseArea { anchors.fill: parent; onClicked: root.previewOpen = false }

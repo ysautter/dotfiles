@@ -1,8 +1,11 @@
 import QtQuick
 import qs.config
 import qs.components
+import qs.services
 
 // Month calendar (Monday first, ISO week numbers). Scroll to change month.
+// Dots mark days with events (services/Events.qml); clicking a day asks for
+// the Calendar tab at that week (dayPicked). Non-workdays are shaded.
 Column {
     id: root
     width: parent.width
@@ -12,8 +15,11 @@ Column {
     property date today: new Date()
     property int year: today.getFullYear()
     property int month: today.getMonth()     // 0..11
+    signal dayPicked(date day)
 
-    onActiveChanged: if (active) reset()
+    onActiveChanged: if (active) { reset(); load(); }
+    onDaysChanged: if (active) load()
+    function load() { Events.ensure(days[0], 42); }
 
     function reset() {
         today = new Date();
@@ -82,7 +88,7 @@ Column {
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 text: modelData
-                color: Qt.alpha(Colors.fg, index === 0 ? 0.35 : index >= 6 ? 0.8 : 0.55)
+                color: Qt.alpha(Colors.fg, index === 0 ? 0.35 : Events.workdays.includes(index) ? 0.8 : 0.5)
                 font.family: Theme.font
                 font.pixelSize: Theme.fontSize - 2
             }
@@ -98,13 +104,18 @@ Column {
                 readonly property date day: root.days[row * 7 + Math.max(0, col - 1)]
                 readonly property bool isToday: col > 0 && day.toDateString() === root.today.toDateString()
                 readonly property bool inMonth: day.getMonth() === root.month
+                readonly property var evs: col > 0 ? Events.onDay(day) : []
+                readonly property bool navigable: col > 0
+                function navActivate() { root.dayPicked(day); }
 
                 width: grid.cell
                 height: Theme.s(28)
-                color: isToday ? Colors.active : m.containsMouse && col > 0 ? Qt.alpha(Colors.hover, 0.3) : "transparent"
+                color: isToday ? Colors.active : m.containsMouse && col > 0 ? Qt.alpha(Colors.hover, 0.3)
+                     : col > 0 && !Events.isWorkday(day) ? Qt.alpha(Colors.fg, 0.07) : "transparent"
 
                 Text {
                     anchors.centerIn: parent
+                    anchors.verticalCenterOffset: cell.evs.length > 0 ? -Theme.s(2) : 0
                     text: cell.col === 0 ? root.isoWeek(cell.day) : cell.day.getDate()
                     color: cell.col === 0 ? Qt.alpha(Colors.fg, 0.35)
                          : cell.inMonth ? Colors.fg : Qt.alpha(Colors.fg, 0.3)
@@ -119,7 +130,36 @@ Column {
                     height: Theme.s(2)
                     color: Colors.fg
                 }
-                MouseArea { id: m; anchors.fill: parent; hoverEnabled: true }
+                Row {     // up to 3 event dots
+                    visible: cell.evs.length > 0
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: Theme.s(3)
+                    spacing: Theme.s(2)
+                    opacity: cell.inMonth ? 1 : 0.5
+                    Repeater {
+                        model: cell.evs.slice(0, 3)
+                        Rectangle {
+                            required property var modelData
+                            width: Theme.s(4)
+                            height: width
+                            radius: width / 2
+                            color: modelData.color
+                        }
+                    }
+                }
+                MouseArea {
+                    id: m
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: cell.col > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: if (cell.col > 0) cell.navActivate()
+                }
+                Tooltip {
+                    target: cell
+                    hovered: m.containsMouse && cell.evs.length > 0
+                    text: cell.evs.map(ev => (ev.multiDay ? "" : Events.timeText(ev, cell.day) + "  ") + ev.summary).join("\n")
+                }
             }
         }
     }

@@ -4,7 +4,7 @@ import qs.components
 import qs.services
 
 // Attention area: items that only appear when they need you (pending updates,
-// tasks due today/overdue, GitLab MRs waiting for my review, disks past Theme.attnDisk). They slide in/out via BarModule's `shown`.
+// the next calendar event (calendar.remindMinutes before it), tasks due today/overdue, GitLab MRs waiting for my review, deferred/bounced mail, disks past Theme.attnDisk). They slide in/out via BarModule's `shown`.
 Row {
     id: root
 
@@ -22,6 +22,19 @@ Row {
         tooltip: Updates.packages.slice(0, 25).map(p => p.name).join("\n")
                  + (Updates.count > 25 ? `\n… and ${Updates.count - 25} more` : "")
         onClicked: button => button === Qt.RightButton ? Updates.refresh() : root.panelRequested("updates", updates)
+    }
+
+    // ---- calendar event starting soon (CalDAV) ------------------------------------------
+    BarModule {
+        id: nextEvent
+        readonly property var ev: Events.upcoming
+        shown: ev !== null
+        icon: "\uf133"
+        text: ev ? Qt.formatTime(new Date(ev.s), "HH:mm") + " " + (ev.summary.length > 28 ? ev.summary.slice(0, 27) + "…" : ev.summary) : ""
+        textColor: ev && ev.s <= Events.now ? Colors.critical : Colors.warning
+        clickable: true
+        tooltip: ev ? Events.tooltip(ev) : ""
+        onClicked: button => button === Qt.RightButton ? Events.refresh() : root.panelRequested("dashboard:calendar", nextEvent)
     }
 
     // ---- tasks due today / overdue (CalDAV) ------------------------------------------
@@ -47,6 +60,19 @@ Row {
         clickable: true
         tooltip: `Review (${GitLab.milestone}):\n` + GitLab.myReviews.slice(0, 15).map(i => `${i.ref}  ${i.title}`).join("\n")
         onClicked: button => button === Qt.RightButton ? GitLab.refresh() : root.panelRequested("dashboard:work", reviews)
+    }
+
+    // ---- mail stuck in / bounced from the Stalwart queue ----------------------------------
+    BarModule {
+        id: mail
+        shown: Mail.problems.length >= Theme.attnMail
+        icon: "\uf0e0"
+        text: Mail.problems.length
+        textColor: Mail.problems.some(m => m.status === "bounced" || m.status === "partial") ? Colors.critical : Colors.warning
+        clickable: true
+        tooltip: "Mail problems:\n" + Mail.problems.slice(0, 10)
+                     .map(m => `${m.status}  ${m.from || "<>"} → ${(m.to ?? []).join(", ")}` + (m.note ? `\n    ${m.note}` : "")).join("\n")
+        onClicked: button => button === Qt.RightButton ? Mail.retry() : root.panelRequested("dashboard:mail", mail)
     }
 
     // ---- disks that are filling up -------------------------------------------------

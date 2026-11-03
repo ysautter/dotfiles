@@ -11,7 +11,8 @@ import QtQuick
 Singleton {
     id: root
 
-    readonly property string dir: Quickshell.env("HOME") + "/.config/waybar"
+    // the greetd login screen points this at /var/lib/qs-greeter/<user>
+    property string dir: Quickshell.env("HOME") + "/.config/waybar"
 
     // raw palette (animated)
     property color background: "#0b0b0b"

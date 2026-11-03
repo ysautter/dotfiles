@@ -3,14 +3,20 @@ import Quickshell.Services.UPower
 import QtQuick
 import QtQuick.Effects
 import qs.config
-import qs.services
 
-// What the lock screen shows (also used by the harmless preview window).
+// What the lock screen shows. Used by the lock (overlays/Lock.qml), its
+// harmless preview window and the greetd login screen (greeter/shell.qml),
+// so it must not depend on qs.services (the greeter has no user session).
 Item {
     id: root
 
-    required property var lock          // Lock.qml scope: password, busy, error, submit()
+    required property var lock          // scope with: password, busy, error, wallpaper, submit(), signal failed()
     property bool preview: false
+    property bool showInput: true       // false: clock only (greeter on secondary monitors)
+    property string userName: Quickshell.env("USER") ?? ""
+    property bool userSelectable: false // greeter: click / Up / Down switches the user
+    property alias extras: extraRow.children   // more items for the bottom row (media, session, power)
+    signal cycleUser(int step)
 
     anchors.fill: parent
 
@@ -72,6 +78,7 @@ Item {
         // password box
         Rectangle {
             id: box
+            visible: root.showInput
             anchors.horizontalCenter: parent.horizontalCenter
             width: Theme.s(360)
             height: Theme.s(48)
@@ -142,18 +149,21 @@ Item {
                 id: input
                 anchors.fill: parent
                 opacity: 0                      // invisible: dots are drawn above
-                focus: !root.preview
-                enabled: !root.preview && !root.lock.busy
+                focus: !root.preview && root.showInput
+                enabled: !root.preview && root.showInput && !root.lock.busy
                 echoMode: TextInput.Password
                 text: root.lock.password
                 onTextChanged: root.lock.password = text
                 onAccepted: root.lock.submit()
                 Keys.onEscapePressed: root.lock.password = ""
-                Component.onCompleted: if (!root.preview) forceActiveFocus()
+                Keys.onUpPressed: if (root.userSelectable) root.cycleUser(-1)
+                Keys.onDownPressed: if (root.userSelectable) root.cycleUser(1)
+                Component.onCompleted: if (!root.preview && root.showInput) forceActiveFocus()
             }
         }
 
         Text {
+            visible: root.showInput
             anchors.horizontalCenter: parent.horizontalCenter
             height: Theme.s(24)
             verticalAlignment: Text.AlignVCenter
@@ -164,8 +174,9 @@ Item {
         }
     }
 
-    // ---- bottom: user, battery, media --------------------------------------------------------
+    // ---- bottom: user, battery, extras --------------------------------------------------------
     Row {
+        visible: root.showInput
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Theme.s(30)
         anchors.horizontalCenter: parent.horizontalCenter
@@ -173,10 +184,17 @@ Item {
         opacity: root.intro * 0.85
 
         Text {
-            text: "\uf007  " + Quickshell.env("USER")
+            text: "\uf007  " + root.userName
             color: Colors.fg
             font.family: Theme.iconFont
             font.pixelSize: Theme.fontSize
+            MouseArea {
+                anchors.fill: parent
+                anchors.margins: -Theme.s(6)
+                enabled: root.userSelectable
+                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: root.cycleUser(1)
+            }
         }
         Text {
             visible: UPower.displayDevice?.isLaptopBattery ?? false
@@ -186,23 +204,9 @@ Item {
             font.pixelSize: Theme.fontSize
         }
         Row {
-            visible: Media.active
-            spacing: Theme.s(10)
-            Text {
-                text: "\uf001  " + Media.title + (Media.artist ? " — " + Media.artist : "")
-                color: Colors.fg
-                font.family: Theme.iconFont
-                font.pixelSize: Theme.fontSize
-                width: Math.min(implicitWidth, Theme.s(420))
-                elide: Text.ElideRight
-            }
-            Text {
-                text: Media.playing ? "\uf04c" : "\uf04b"
-                color: Colors.fg
-                font.family: Theme.iconFont
-                font.pixelSize: Theme.fontSize
-                MouseArea { anchors.fill: parent; anchors.margins: -Theme.s(6); cursorShape: Qt.PointingHandCursor; onClicked: Media.togglePlaying() }
-            }
+            id: extraRow
+            visible: childrenRect.width > 0
+            spacing: Theme.s(24)
         }
     }
 }
