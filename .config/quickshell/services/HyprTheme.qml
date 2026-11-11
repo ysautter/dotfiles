@@ -9,8 +9,9 @@ import qs.config
 // Styles Hyprland's group tab bar in the bar's theme: mostly transparent
 // tabs (a faint dark tint, darker for the focused tab, so titles stay
 // readable on light wallpapers), bar font and text colour. Uses the same (contrast-checked) colours as
-// the bar, so it follows the wallpaper. Applied via `hyprctl keyword`, again
-// after every wallpaper change and every Hyprland config reload.
+// the bar, so it follows the wallpaper. Applied via `hyprctl eval 'hl.config({...})'`
+// (Lua config; `hyprctl keyword` is gone), again after every wallpaper change
+// and every Hyprland config reload.
 Singleton {
     id: root
 
@@ -19,29 +20,47 @@ Singleton {
         return `rgba(${h(c.r)}${h(c.g)}${h(c.b)}${h(alpha ?? c.a)})`;
     }
 
-    readonly property var settings: [
-        ["group:groupbar:font_family", Theme.font],
-        ["group:groupbar:font_size", 11],
-        ["group:groupbar:font_weight_active", "semibold"],
-        ["group:groupbar:font_weight_inactive", "normal"],
-        ["group:groupbar:height", 18],
-        ["group:groupbar:gradients", 1],          // only a faint tint, see col.* below
-        ["group:groupbar:indicator_height", 0],
-        ["group:groupbar:indicator_gap", 1],
-        ["group:groupbar:rounding", 0],
-        ["group:groupbar:gradient_rounding", 0],
-        ["group:groupbar:gaps_in", 2],
-        ["group:groupbar:gaps_out", 2],
-        ["group:groupbar:text_offset", 0],
-        ["group:groupbar:col.active", hex(Colors.background, 0.6)],
-        ["group:groupbar:col.inactive", hex(Colors.background, 0.22)],
-        ["group:groupbar:col.locked_active", hex(Colors.critical, 0.55)],
-        ["group:groupbar:col.locked_inactive", hex(Colors.background, 0.22)],
-        ["group:groupbar:text_color", hex(Colors.fg, 1)],
-        ["group:groupbar:text_color_inactive", hex(Colors.fg, 0.7)],
-        ["group:col.border_active", hex(Colors.active, 1)],
-        ["group:col.border_inactive", hex(Colors.bg, 0.85)],
-    ]
+    // nested like hl.config({ group = { ... } })
+    readonly property var settings: ({
+        group: {
+            groupbar: {
+                font_family: Theme.font,
+                font_size: 11,
+                font_weight_active: "semibold",
+                font_weight_inactive: "normal",
+                height: 18,
+                gradients: true,          // only a faint tint, see col.* below
+                indicator_height: 0,
+                indicator_gap: 1,
+                rounding: 0,
+                gradient_rounding: 0,
+                gaps_in: 2,
+                gaps_out: 2,
+                text_offset: 0,
+                col: {
+                    active: hex(Colors.background, 0.6),
+                    inactive: hex(Colors.background, 0.22),
+                    locked_active: hex(Colors.critical, 0.55),
+                    locked_inactive: hex(Colors.background, 0.22),
+                },
+                text_color: hex(Colors.fg, 1),
+                text_color_inactive: hex(Colors.fg, 0.7),
+            },
+            col: {
+                border_active: hex(Colors.active, 1),
+                border_inactive: hex(Colors.bg, 0.85),
+            },
+        },
+    })
+
+    // JS value -> Lua literal (strings via JSON quoting, which Lua understands)
+    function toLua(v) {
+        if (typeof v === "object" && v !== null)
+            return "{ " + Object.keys(v).map(k => `${k} = ${toLua(v[k])}`).join(", ") + " }";
+        if (typeof v === "string")
+            return JSON.stringify(v);
+        return String(v);
+    }
 
     function apply() { debounce.restart(); }
 
@@ -50,7 +69,7 @@ Singleton {
         id: debounce
         interval: Theme.animColor + 200
         onTriggered: {
-            proc.command = ["hyprctl", "--batch", root.settings.map(s => `keyword ${s[0]} ${s[1]}`).join(" ; ")];
+            proc.command = ["hyprctl", "eval", `hl.config(${root.toLua(root.settings)})`];
             proc.running = true;
         }
     }

@@ -11,7 +11,7 @@ import qs.services
 //   qs ipc call lock lock      lock now
 //   qs ipc call lock preview   show what it looks like (normal window, Esc closes)
 // If quickshell crashes while locked, Hyprland allows a new lock client
-// (misc:allow_session_lock_restore in hypr/quickshell.conf): run `hyprlock`
+// (misc.allow_session_lock_restore in hypr/quickshell.lua): run `hyprlock`
 // from a TTY (Ctrl+Alt+F3) to unlock.
 // Locks right after login when started with QS_AUTOLOCK=1 (greetd autologin,
 // see greeter/README.md) - once per login, not on every quickshell restart.

@@ -8,7 +8,7 @@ import qs.components
 
 // greetd login screen: the lock screen look (components/LockContent.qml)
 // authenticating via greetd. Installed to /etc/greetd/quickshell by
-// greeter/install.sh and started by /etc/greetd/hyprland.conf.
+// greeter/install.sh and started by /etc/greetd/hyprland.lua.
 //   Up/Down or click on the user    switch user
 //   click on the session            switch session (/usr/share/wayland-sessions)
 // Wallpaper + colours per user come from /var/lib/qs-greeter/<user>

@@ -5,12 +5,12 @@ notifications, launcher, lock screen, OSD, overview, screenshot tool and a
 quick-question chat with the pi agent. Colours follow the wallpaper
 (wallust → `~/.config/waybar/colors.css` + `dominant.css`, watched live).
 
-Started by `exec-once = qs -n -d` in `hypr/hyprland.conf` (`-n`: never a second
+Started by `hl.exec_cmd("qs -n -d")` (hyprland.start) in `hypr/hyprland.lua` (`-n`: never a second
 instance; with two running, `qs ipc call` blocks). It reloads itself on every
 file change. Restart: `pkill -x qs; qs -n -d`. Logs: `qs log -f`. All
 features: `qs ipc show`.
 
-## Keybinds (`~/.config/hypr/quickshell.conf`)
+## Keybinds (`~/.config/hypr/quickshell.lua`)
 
 | Keys | Action |
 |---|---|
@@ -131,7 +131,7 @@ Recurring events open read-only.
 - **Login screen**: the same look as the greetd greeter, with autologin +
   immediate lock on LUKS machines - see `greeter/README.md`.
 - **Group tab bar**: `services/HyprTheme.qml` gives Hyprland's groupbar the
-  bar's colours and font via `hyprctl keyword`, again after wallpaper changes
+  bar's colours and font via `hyprctl eval 'hl.config(...)'`, again after wallpaper changes
   and config reloads.
 
 ## Layout
@@ -179,6 +179,10 @@ config checkout pre-quickshell -- .config/hypr/hyprland.conf
 systemctl --user unmask dunst
 pkill -x qs; hyprctl reload; ~/.local/bin/launch-waybar &
 ```
+
+Note: all tags above predate the Lua migration (`hypr-lua` and later). They
+contain hyprlang `.conf` files, which Hyprland >= 0.57 can no longer load -
+translate the relevant parts to `hyprland.lua` / `quickshell.lua` instead.
 
 Outside git: `systemctl --user mask dunst` (undo with `unmask`), package
 `hypridle` (idle lock, see `hypr/hypridle.conf`).

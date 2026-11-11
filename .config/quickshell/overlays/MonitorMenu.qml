@@ -15,8 +15,8 @@ Overlay {
 
     readonly property var layouts: [
         { id: "default",     label: "Laptop only",    glyph: "\uf109", file: "" },
-        { id: "beamer",      label: "Laptop + beamer", glyph: "\uf26c", file: "monitors_with_beamer.conf" },
-        { id: "only-beamer", label: "Beamer only",     glyph: "\uf03d", file: "monitors_only_beamer.conf" }
+        { id: "beamer",      label: "Laptop + beamer", glyph: "\uf26c", file: "monitors_with_beamer.lua" },
+        { id: "only-beamer", label: "Beamer only",     glyph: "\uf03d", file: "monitors_only_beamer.lua" }
     ]
     // entries: 3 layouts + presentation mode + wdisplays
     readonly property int count: layouts.length + 2
@@ -28,7 +28,7 @@ Overlay {
 
     Process {
         id: readLink
-        command: ["readlink", Quickshell.env("HOME") + "/.config/hypr/monitors.conf"]
+        command: ["readlink", Quickshell.env("HOME") + "/.config/hypr/monitors.lua"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const f = text.trim();
