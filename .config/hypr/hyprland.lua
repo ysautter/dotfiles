@@ -33,24 +33,10 @@ hl.config({
 ---- MY PROGRAMS ----
 ---------------------
 
-local wallpaper       = home .. "/Pictures/Wallpapers/wallhaven-dpd13o.png"
-local term            = "kitty"
-local floating_term   = "alacritty"
-local editor          = "code"
-local notetaker       = "logseq"
-local chat            = "signal-desktop"
-local chat_work       = "firefoxpwa site launch 01JZ85Z9DZFRRN7B5T44VKN0AH"
-local mailer          = "thunderbird"
-local music           = "~/bin/qobuz"
-local browser         = "MOZ_ENABLE_WAYLAND=1 firefox"
-local filemanager     = "thunar"
-local passwordmanager = "~/bin/Buttercup-linux-x64.AppImage"
-local calendar        = "~/bin/calendar"
--- local calendar = "flatpak run com.microsoft.Teams"
-local videcon         = "XDG_SESSION_TYPE=x11 XDG_CURRENT_DESKTOP=gnome flatpak run us.zoom.Zoom"
-local locker          = "swaylock -f -e -l -L -s fill -i " .. wallpaper
-local suspend_and_lock = locker .. " && sleep 2 && systemctl suspend"
-local _ = { music, suspend_and_lock } -- currently unused, kept for reference
+local term    = "kitty"
+local browser = "MOZ_ENABLE_WAYLAND=1 firefox"
+local mailer  = "thunderbird"
+local chat    = "signal-desktop"
 
 ------------------
 ---- MONITORS ----
@@ -188,21 +174,13 @@ local exec = hl.dsp.exec_cmd
 
 hl.bind("SUPER + ALT + T", exec(term))
 hl.bind("SUPER + Return",  exec(term))
-hl.bind("SUPER + ALT + Y", exec(floating_term .. " -e yorick"))
-hl.bind("SUPER + ALT + F", exec(filemanager))
 hl.bind("SUPER + ALT + B", exec(browser))
 hl.bind("SUPER + ALT + M", exec(mailer))
-hl.bind("SUPER + ALT + Z", exec(videcon))
-hl.bind("SUPER + ALT + O", exec(notetaker))
-hl.bind("SUPER + ALT + E", exec(editor))
-hl.bind("SUPER + ALT + C", exec(calendar))
-hl.bind("SUPER + ALT + P", exec(passwordmanager))
 hl.bind("SUPER + ALT + Q", exec("pkill Hyprland"))
 hl.bind("SUPER + D", exec(home .. "/.config/rofi/launchers/type-3/launcher.sh"))  -- overridden in quickshell.lua
 hl.bind("SUPER + P", exec(home .. "/.config/rofi/applets/bin/powermenu.sh"))      -- overridden in quickshell.lua
 hl.bind("SUPER + W", exec(home .. "/.local/bin/change-wp next"))
 
-hl.bind("SUPER + CTRL + a", exec(home .. "/.local/bin/toggleaudio.sh"))
 hl.bind("SUPER + CTRL + d", exec(home .. "/.local/bin/switch-monitor-layout default"))
 hl.bind("SUPER + CTRL + b", exec(home .. "/.local/bin/switch-monitor-layout beamer"))
 hl.bind("SUPER + CTRL + SHIFT + b", exec(home .. "/.local/bin/switch-monitor-layout only-beamer"))
@@ -230,14 +208,9 @@ hl.bind("SUPER + C",         hl.dsp.group.next())
 hl.bind("SUPER + SHIFT + W", exec(home .. "/.local/bin/change-wp"))
 hl.bind("SUPER + SHIFT + C", hl.dsp.group.prev())
 hl.bind("SUPER + R",         hl.dsp.layout("togglesplit"))
-hl.bind("SUPER + Z",         exec("/home/frigaut/bin/myrofi"))
--- hl.bind("SUPER + P", hl.dsp.window.pseudo())
 hl.bind("SUPER + F",         hl.dsp.window.fullscreen())
 hl.bind("SUPER + ALT + CTRL + L", exec("hyprlock"))  -- overridden in quickshell.lua
-hl.bind("SUPER + X",         exec("farge --notify"))
 hl.bind("SUPER + SHIFT + Q", hl.dsp.window.close())
-hl.bind("SUPER + SHIFT + N", exec("swaync-client -t -sw"))  -- overridden in quickshell.lua
-hl.bind("XF86Display",       exec("wdisplays"))
 hl.bind("SUPER + S",         exec(home .. "/.local/bin/screenshot.sh"))  -- overridden in quickshell.lua
 
 ------------------------------------
@@ -312,14 +285,8 @@ hl.bind("XF86AudioPrev",         exec("playerctl previous"))
 ---------------------
 
 local shot = "~/Pictures/screenshot_$(date +%Y%m%d_%H%M%S).webp"
-hl.bind("F11",   exec("grim " .. shot .. ' && dunstify "Screenshot saved"'))
-hl.bind("Print", exec("grimshot save screen " .. shot .. ' && dunstify "Screenshot saved"'))
-hl.bind("SUPER + Print", exec([[grim -g "$(~/bin/hyprland_get_current_window_coord.sh)" ]] .. shot .. ' && dunstify "Window-shot saved"'))
-hl.bind("SUPER + SHIFT + Print", exec("grimshot save area " .. shot .. ' && dunstify "Section of screenshot saved"'))
-hl.bind("CTRL + Print", exec('grimshot copy screen && dunstify "Screen copied to clipboard"'))
-hl.bind("SUPER + CTRL + Print", exec([[grim -g "$(~/bin/hyprland_get_current_window_coord.sh)" - | wl-copy -t image/png && dunstify "Window copied to clipboard"]]))
-hl.bind("SUPER + CTRL + SHIFT + Print", exec('grimshot copy area && dunstify "Screen part copied to clipboard"'))
-hl.bind("SUPER + ALT + Print", exec("flameshot gui"))
+-- (area/window screenshots: SUPER+S, quickshell screenshot tool)
+hl.bind("F11", exec("grim " .. shot .. ' && dunstify "Screenshot saved"'))
 
 -------------------
 ---- AUTOSTART ----
@@ -334,7 +301,6 @@ hl.on("hyprland.start", function()
     hl.exec_cmd(term,      { workspace = "1 silent" })
     hl.exec_cmd(browser,   { workspace = "2 silent" })
     hl.exec_cmd(chat,      { workspace = "6 silent" })
-    hl.exec_cmd(chat_work, { workspace = "6 silent" })
     hl.exec_cmd(mailer,    { workspace = "6 silent" })
 
     hl.exec_cmd("qs -n -d") -- quickshell (-n: never start a second instance) (~/.config/quickshell), auto-reloads on edit
