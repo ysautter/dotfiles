@@ -265,6 +265,8 @@ if pgrep -x waybar >/dev/null; then
 fi
 # kitty re-reads its config (incl. colors-wallust.conf) on SIGUSR1
 pkill -USR1 -x kitty 2>/dev/null
+# login screen (greetd + quickshell) gets the same wallpaper and colours
+"$HOME/.config/quickshell/scripts/greeter-sync.sh"
 
 echo "Wallpaper and colors updated successfully!"
 echo "Note: Hyprlock will use the new background the next time it is invoked."
