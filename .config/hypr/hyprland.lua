@@ -134,7 +134,7 @@ hl.config({
 hl.animation({ leaf = "windows",    enabled = true, speed = 3, bezier = "default" })
 hl.animation({ leaf = "border",     enabled = true, speed = 3, bezier = "default" })
 hl.animation({ leaf = "fadeIn",     enabled = true, speed = 3, bezier = "default" })
-hl.animation({ leaf = "workspaces", enabled = true, speed = 3, bezier = "default", style = "slidefade" })
+hl.animation({ leaf = "workspaces", enabled = true, speed = 3, bezier = "default", style = "slidefade" }) -- keep in sync with wsAnimDefault (agent hub)
 
 ----------------------
 ---- WINDOW RULES ----
@@ -154,7 +154,7 @@ end
 hl.window_rule({ match = { class = "wdisplays" }, size = "1000 800" })
 
 local opacity = {
-    subl = "0.90", kitty = "0.90", code = "0.90", alacritty = "0.80", rofi = "0.80",
+    subl = "0.90", kitty = "0.90", ["agents-hub"] = "1", code = "0.90", alacritty = "0.80", rofi = "0.80",
     ["org.freecad.FreeCAD"] = "1",
 }
 for class, value in pairs(opacity) do
@@ -255,6 +255,41 @@ hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true })
 hl.bind("SUPER + SHIFT + S",   toggleAllFloat)
 hl.bind("SUPER + ALT + minus", hl.dsp.window.move({ workspace = "special" }))
 hl.bind("SUPER + minus",       hl.dsp.workspace.toggle_special())
+
+-- AGENT HUB: one opaque kitty on the named workspace "agents", attached to tmux; pi
+-- sessions live in tmux, not in windows. SUPER+I jumps there / back to the previous
+-- workspace (hub launched when the workspace is created).
+-- Own animations instead of the normal horizontal slidefade: opening = smooth full-screen
+-- drop from the top, closing = vertical slide+fade back (both ease-out, no bounce).
+-- SUPER+SHIFT+I opens the session picker (~/.local/bin/tmux-pick) inside it.
+local hub = term .. " --class agents-hub -e " .. home .. "/.local/bin/agents-hub attach"
+hl.workspace_rule({ workspace = "name:agents", on_created_empty = hub })
+hl.window_rule({ match = { class = "agents-hub" }, workspace = "name:agents silent" })
+
+hl.curve("hubEaseOut", { type = "bezier", points = { {0.23, 1}, {0.32, 1} } }) -- easeOutQuint
+local wsAnimDefault = { leaf = "workspaces", enabled = true, speed = 3, bezier = "default", style = "slidefade" }
+local wsAnimOpen    = { leaf = "workspaces", enabled = true, speed = 4, bezier = "hubEaseOut", style = "slidevert" }
+local wsAnimClose   = { leaf = "workspaces", enabled = true, speed = 4, bezier = "hubEaseOut", style = "slidefadevert 25%" }
+local function withHubAnim(anim, dispatcher)
+    hl.animation(anim)
+    hl.dispatch(dispatcher)
+    hl.timer(function() hl.animation(wsAnimDefault) end, { timeout = 600, type = "oneshot" })
+end
+-- global so scripts can use it: hyprctl dispatch 'AgentsHubEnter()'
+function AgentsHubEnter()
+    withHubAnim(wsAnimOpen, hl.dsp.focus({ workspace = "name:agents" }))
+    return hl.dsp.focus({ workspace = "name:agents" }) -- no-op, already there
+end
+local function toggleHub()
+    local ws = hl.get_active_workspace()
+    if ws and ws.name == "agents" then
+        withHubAnim(wsAnimClose, hl.dsp.focus({ workspace = "previous" }))
+    else
+        withHubAnim(wsAnimOpen, hl.dsp.focus({ workspace = "name:agents" }))
+    end
+end
+hl.bind("SUPER + I",         toggleHub)
+hl.bind("SUPER + SHIFT + I", exec(home .. "/.local/bin/agents-hub pick"))
 
 -- NOTE: SUPER+CTRL+left/right are also bound to "move window to workspace -1/+1"
 -- above - both fire, exactly as in the old config.

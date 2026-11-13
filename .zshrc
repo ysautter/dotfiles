@@ -245,7 +245,15 @@ bindkey -M menuselect 'k' vi-up-line-or-history
 bindkey -M menuselect 'l' vi-forward-char
 bindkey -M menuselect 'j' vi-down-line-or-history
 
+# Edit current command line in $EDITOR (nvim)
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey -M viins '^X^E' edit-command-line   # insert mode: Ctrl-X Ctrl-E
+bindkey -M vicmd '^X^E' edit-command-line
+bindkey -M vicmd 'v' edit-command-line      # normal mode (Esc): v
+
 if [ "$TMUX" = "" ]; then tmux; fi
+alias t=~/.local/bin/tmux-pick   # tmux session picker (also prefix+f / SUPER+SHIFT+I)
 
 #alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
 

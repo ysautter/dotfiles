@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# tmux session picker (fzf) with pi status + preview, vi-style keys.
+#   tmux-pick            interactive picker (inside tmux: switch-client, outside: attach)
+#   tmux-pick --count    number of pi sessions waiting for input (for status-right)
+#   tmux-pick --list     list (used by fzf reload)
+#   tmux-pick --new      pick a directory, start pi in a new detached session, switch to it
+# Colours use the terminal's ANSI palette (0-15), so they follow the kitty/wallust theme.
+set -u
+# fzf runs preview/execute via $SHELL; zsh would expand tmux's "=name" targets as commands
+export SHELL=/bin/bash
+
+BUSY_SECS=${TMUX_PICK_BUSY_SECS:-5}   # output within the last N s => pi is working
+DEPTH=${TMUX_PICK_DEPTH:-4}           # dir depth below $HOME offered for new sessions
+EXCLUDE=(Mount Games Zomboid go thunderbird Thunderbird node_modules)
+self=$(readlink -f "$0")
+
+# ANSI helpers
+R=$'\e[0m' B=$'\e[1m' D=$'\e[2m'
+c() { printf '\e[38;5;%sm' "$1"; }
+C_WAIT=$(c 6) C_BUSY=$(c 2) C_IDLE=$(c 8) C_PATH=$(c 5) C_KEY=$(c 3) C_NAME=$(c 15) C_HERE=$(c 4)
+# icons (Nerd Font), as escapes so editors/tools can't mangle private-use glyphs
+I_HERE=$'\uf054' I_SHOWN=$'\U000f0379' I_ROBOT=$'\U000f06a9' I_FOLDER=$'\U000f024b' I_BRANCH=$'\ue725'
+I_WAIT=$'\u25cf' I_BUSY=$'\u25d0' I_IDLE=$'\u25cb'
+export I_BRANCH
+
+human() { # seconds -> 5s / 3m / 2h / 4d
+    local s=$1
+    if   (( s < 60 ));    then echo "${s}s"
+    elif (( s < 3600 ));  then echo "$((s / 60))m"
+    elif (( s < 86400 )); then echo "$((s / 3600))h"
+    else                       echo "$((s / 86400))d"; fi
+}
+
+# fields: raw name \t state \t coloured display   (sorted: waiting pi, busy pi, other)
+list() {
+    local now w cur; now=$(date +%s)
+    cur=$( [[ -n ${TMUX:-} ]] && tmux display -p '#S' 2>/dev/null )
+    w=$(tmux list-sessions -F '#{session_name}' 2>/dev/null | awk '{ if (length > m) m = length } END { print m + 0 }')
+    tmux list-sessions -F $'#{session_name}\t#{pane_current_command}\t#{window_activity}\t#{pane_current_path}\t#{session_attached}' 2>/dev/null |
+    while IFS=$'\t' read -r name cmd act path att; do
+        local age=$(( now - act )) rank state icon label col here view
+        if [[ $cmd == pi ]]; then
+            if (( age < BUSY_SECS )); then rank=1 state=busy    icon=$I_BUSY label=working col=$C_BUSY
+            else                           rank=0 state=waiting icon=$I_WAIT label=waiting col=$C_WAIT; fi
+        else
+            rank=2 state=shell icon=$I_IDLE label=$cmd col=$C_IDLE
+        fi
+        here=' '; [[ $name == "$cur" ]] && here="$C_HERE$B$I_HERE$R"   # this client
+        view=' '; (( att > 0 )) && view="$D$I_SHOWN$R"                 # shown somewhere
+        printf '%s\t%s\t%s\t%s %s%s%s %s  %s%-*s%s  %s%-8s%s %s%4s%s  %s%s%s\n' \
+            "$rank$(printf '%012d' "$age")" "$name" "$state" \
+            "$here" "$col" "$icon" "$R" "$view" "$B$C_NAME" "$w" "$name" "$R" \
+            "$col" "$label" "$R" "$D" "$(human "$age")" "$R" "$C_PATH$D" "${path/#$HOME/\~}" "$R"
+    done | sort | cut -f2-
+}
+
+count() {
+    local n; n=$(list | awk -F'\t' '$2 == "waiting"' | wc -l)
+    (( n > 0 )) && printf '⏳%s ' "$n"
+}
+
+go() { # switch/attach to session $1
+    if [[ -n ${TMUX:-} ]]; then tmux switch-client -t "=$1"; else exec tmux attach -t "=$1"; fi
+}
+
+dirs() { # zoxide (frecency) first, then all non-hidden dirs below $HOME, deduped
+    local z ex=()
+    z=$(command -v zoxide || echo "$HOME/.local/share/zinit/plugins/ajeetdsouza---zoxide/zoxide")
+    for e in "${EXCLUDE[@]}"; do ex+=(-E "$e"); done
+    {
+        # --all: no existence check by zoxide - it stats every entry and blocks for ~12 s
+        # on the autofs mount /mnt/archive. Drop mount points first, then test locally.
+        [[ -x $z ]] && "$z" query -l --all 2>/dev/null |
+            grep -vE "^(/mnt|/media|/run|/proc|/sys|$HOME/Mount)(/|\$)" |
+            while IFS= read -r d; do [[ -d $d ]] && printf '%s\n' "$d"; done
+        echo "$HOME"
+        timeout 5 fd -t d -d "$DEPTH" --one-file-system "${ex[@]}" . "$HOME" 2>/dev/null | sed 's:/$::'
+    } | awk '!seen[$0]++' | sed "s:^$HOME:~:"
+}
+
+# shared look
+STYLE=(--ansi --layout reverse --height 100% --cycle --highlight-line
+    --style full:rounded --info inline-right --scrollbar '│'
+    --pointer '▌' --gutter ' ' --no-separator
+    --color 'fg:-1,bg:-1,fg+:15,bg+:0,hl:6,hl+:6:bold,gutter:-1'
+    --color 'border:8,list-border:8,input-border:8,preview-border:8,footer-border:8'
+    --color 'label:4:bold,list-label:8,input-label:4:bold,preview-label:5:bold,footer-label:8'
+    --color 'prompt:3:bold,pointer:6:bold,info:8,spinner:2,header:8,footer:8,ghost:8:italic,query:15:bold')
+
+# vi-style modal fzf: NORMAL (prompt "❯ ") j/k g/G C-d/C-u move, l/Enter accept, q/Esc quit,
+# i or / -> SEARCH (prompt "/ ") where letters type, Esc back to NORMAL, Enter accepts.
+# $1 = title, $2 = extra normal-mode letter keys bound by the caller, $3 = "search" to start in SEARCH.
+vi_opts() {
+    local t=$1 keys="j,k,g,G,l,q,i,/${2:+,$2}"
+    local to_search="unbind($keys)+change-prompt(/ )+change-input-label( $t · SEARCH )+change-ghost(type to filter · Esc = normal mode)"
+    local to_normal="rebind($keys)+change-prompt(❯ )+change-input-label( $t · NORMAL )+change-ghost(/ or i to search)"
+    VI=(--prompt '❯ ' --input-label " $t · NORMAL " --ghost '/ or i to search'
+        --bind 'j:down,k:up,g:first,G:last,l:accept,q:abort'
+        --bind 'ctrl-j:down,ctrl-k:up,ctrl-d:half-page-down,ctrl-u:half-page-up'
+        --bind "i:$to_search" --bind "/:$to_search"
+        --bind "esc:transform:[ \"\$FZF_PROMPT\" = '/ ' ] && echo '$to_normal' || echo abort")
+    [[ ${3:-} == search ]] && VI+=(--bind "start:$to_search")
+}
+
+keyhint() { # "key desc" pairs -> coloured footer line
+    local out=""
+    while (( $# )); do out+="${C_KEY}${B}$1${R} ${D}$2${R}   "; shift 2; done
+    printf '%s' "$out"
+}
+
+new() {
+    local dir name base i=2
+    vi_opts "$I_ROBOT new pi session" '' search
+    dir=$(dirs | fzf "${STYLE[@]}" "${VI[@]}" --print-query --list-label " $I_FOLDER folder " \
+        --footer "$(keyhint '⏎' 'start pi here' 'Esc' 'normal mode' 'j/k' 'move' 'q' 'cancel')${D}(typed paths work too)${R}" \
+        --preview 'd={}; d="${d/#\~/$HOME}"; b=$(git -C "$d" branch --show-current 2>/dev/null) && printf "\e[38;5;2m%s %s\e[0m\n\n" "$I_BRANCH" "$b"; lsd -A --group-dirs first --color always --icon always "$d" 2>/dev/null || ls -A --color=always "$d"' \
+        --preview-window 'right,45%' \
+        --bind 'focus:transform-preview-label:printf " %s " {}' | tail -1)
+    [[ -z $dir ]] && return 1
+    dir=${dir/#\~/$HOME}
+    [[ -d $dir ]] || { echo "no such dir: $dir"; sleep 1; return 1; }
+    base=$(basename "$dir" | tr '.: ' '---'); name=$base
+    while tmux has-session -t "=$name" 2>/dev/null; do name="$base-$i"; i=$((i + 1)); done
+    tmux new-session -d -s "$name" -c "$dir"
+    tmux send-keys -t "=$name:" pi Enter   # pane target needs the trailing ':'
+    go "$name"
+}
+
+case ${1:-} in
+    --list)  list; exit ;;
+    --count) count; exit ;;
+    --new)   new; exit ;;
+esac
+
+rename='execute(printf "\n  rename \e[1m%s\e[0m to: " {1}; read -r n; [ -n "$n" ] && tmux rename-session -t ={1} "$n")'
+legend=" ${C_WAIT}${I_WAIT}${R} waiting  ${C_BUSY}${I_BUSY}${R} working  ${C_IDLE}${I_IDLE}${R} shell  ${D}${I_SHOWN}${R} shown  ${C_HERE}${I_HERE}${R} here "
+vi_opts "$I_ROBOT pi sessions" 'x,r,n'
+sel=$(list | fzf "${STYLE[@]}" "${VI[@]}" --delimiter $'\t' --with-nth 3 \
+    --list-label "$legend" --list-label-pos -2 \
+    --footer "$(keyhint '⏎/l' 'switch' 'n' 'new pi' 'x' 'kill' 'r' 'rename' '/' 'search' 'q' 'quit')" \
+    --preview 'tmux capture-pane -ep -t ={1}: | grep -v "^\s*$" | tail -n $FZF_PREVIEW_LINES' \
+    --preview-window 'right,55%,nowrap' \
+    --bind 'focus:transform-preview-label:printf " %s · %s " {1} {2}' \
+    --bind "n:become($self --new)" --bind "ctrl-n:become($self --new)" \
+    --bind "x:execute-silent(tmux kill-session -t ={1})+reload($self --list)" \
+    --bind "ctrl-x:execute-silent(tmux kill-session -t ={1})+reload($self --list)" \
+    --bind "r:$rename+reload($self --list)" --bind "ctrl-r:$rename+reload($self --list)" \
+    | cut -f1)
+
+[[ -n $sel ]] && go "$sel"

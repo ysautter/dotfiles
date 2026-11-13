@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Agent hub: one kitty (class agents-hub) on workspace name:agents, attached to tmux.
+#   agents-hub attach   run inside the hub kitty: keep a tmux client attached (loop)
+#   agents-hub empty    runs inside the "hub" placeholder session: session picker, then shell
+#   agents-hub pick     go to the hub and open the tmux-pick popup in it (SUPER+SHIFT+I)
+# Everything is inside main() so bash parses the whole file up front - editing this script
+# while a hub loop is running cannot break the running loop.
+set -u
+
+self=$(readlink -f "$0")
+
+is_descendant() { # is pid $1 a descendant of pid $2?
+    local p=$1
+    while [[ -n $p && $p != 1 && $p != 0 ]]; do
+        [[ $p == "$2" ]] && return 0
+        p=$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')
+    done
+    return 1
+}
+
+main() {
+    case ${1:-attach} in
+    attach)
+        # Keep the hub alive: when the viewed session ends (pi exits, killed with x, detached),
+        # attach the next most recent session, or - if none is left - a "hub" session that
+        # shows the session picker (n = new pi). Close the hub window with SUPER+SHIFT+Q.
+        while :; do
+            if tmux has-session 2>/dev/null; then tmux attach
+            else tmux new-session -s hub "$self empty"; fi
+            sleep 0.2   # guard against a tight loop if tmux fails
+        done
+        ;;
+    empty)
+        "$HOME/.local/bin/tmux-pick"
+        # switched to another session (e.g. n = new pi) -> this placeholder session can go
+        [[ $(tmux display -p -t "$TMUX_PANE" '#{session_attached}') == 0 ]] && exit 0
+        exec "${SHELL:-zsh}"   # picker quit with q/Esc -> plain shell
+        ;;
+    pick)
+        local kpid client
+        # go to workspace "agents" (on_created_empty launches the hub if needed)
+        # (Hyprland >= 0.57: `hyprctl dispatch` takes a Lua expression, not the old dispatcher syntax)
+        [[ $(hyprctl -j activeworkspace | jq -r .name) == agents ]] ||
+            hyprctl dispatch 'AgentsHubEnter()' >/dev/null
+        # wait for the hub's tmux client (a descendant of the hub kitty)
+        for _ in $(seq 50); do
+            kpid=$(hyprctl -j clients | jq -r '.[] | select(.class=="agents-hub") | .pid' | head -1)
+            if [[ -n $kpid ]]; then
+                client=$(tmux list-clients -F '#{client_pid} #{client_tty}' 2>/dev/null |
+                    while read -r pid tty; do
+                        is_descendant "$pid" "$kpid" && echo "$tty" && break
+                    done)
+                [[ -n $client ]] && break
+            fi
+            sleep 0.1
+        done
+        [[ -n ${client:-} ]] || { notify-send "agents-hub" "hub tmux client not found"; exit 1; }
+        tmux display-popup -c "$client" -B -E -w 88% -h 80% "$HOME/.local/bin/tmux-pick"
+        ;;
+    esac
+}
+
+main "$@"
+exit
