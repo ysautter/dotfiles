@@ -5,10 +5,20 @@
  * duplicates the session; instead this keeps ONE linear session but tags every
  * exchange with a logical thread, so follow-ups land "under" their thread.
  *
+ * Model (v2)
+ *  - Session GOAL (one line, always visible) + optional NEXT step: the anchor.
+ *  - Threads are OPEN POINTS: questions the model asked the user (with prepared
+ *    answers) or side discussions. They close with a one-line decision, which
+ *    forms the decision log. No task lists (legacy items are shown read-only).
+ *  - Unanswered questions are auto-parked after AUTO_PARK user messages.
+ *
  * Features
- *  - `thread` tool: the model opens/switches/resolves threads and maintains
- *    per-thread items (goals, tasks, questions). Batched ops = one call.
- *  - Widget above the editor: all threads, active one highlighted, open items.
+ *  - `thread` tool: goal/next/ask/open/switch/resolve/park/reopen/rename. Batched ops = one call.
+ *  - Alt+Q (/answer): answer open questions by picking prepared answers; the
+ *    answers land in the editor as "4. …" lines for review, Enter sends.
+ *  - User messages: lines starting with "#4 ", "4. ", "4) " or "4: " (also after "; ")
+ *    address thread 4.
+ *  - Widget above the editor: goal, open points, recent decisions.
  *  - The model starts each part of a reply with a `[[#n]]` marker; the text is
  *    split at markers and filed under thread n. Markers render as dividers
  *    "⤷ #2 · Title" (display-only, via Markdown transformer).
@@ -30,10 +40,20 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { execFile } from "node:child_process";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext, MarkdownTransformContext, Theme } from "@earendil-works/pi-coding-agent";
 import { getAgentDir, getMarkdownTheme } from "@earendil-works/pi-coding-agent";
-import { type Component, Editor, Key, Markdown, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
+import {
+	type Component,
+	Editor,
+	Key,
+	Markdown,
+	matchesKey,
+	truncateToWidth,
+	visibleWidth,
+	wrapTextWithAnsi,
+} from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 // ---------------------------------------------------------------- types
@@ -52,6 +72,14 @@ interface Item {
 interface Thread {
 	id: number;
 	title: string;
+	/** Open question to the user (set via `ask`); answered via picker or "n. …". */
+	prompt?: string;
+	/** Prepared answers for `prompt`. */
+	options?: string[];
+	/** Index into options of the recommended answer. */
+	recommended?: number;
+	/** User messages since this question was last asked/answered (auto-park). */
+	idle?: number;
 	parent?: number;
 	status: ThreadStatus;
 	note?: string;
@@ -64,6 +92,12 @@ interface Thread {
 interface State {
 	threads: Thread[];
 	active?: number;
+	/** What this session is about (one line). */
+	goal?: string;
+	/** Short 1-3 word label of the goal (used as tmux session name). */
+	short?: string;
+	/** Optional single next step. */
+	next?: string;
 	nextId: number;
 }
 
@@ -86,7 +120,13 @@ interface Op {
 	note?: string;
 	question?: string;
 	activate?: boolean;
+	prompt?: string;
+	options?: string[];
+	recommended?: number;
 }
+
+/** Unanswered questions are parked after this many user messages that don't touch them. */
+const AUTO_PARK = 3;
 
 const STATE_ENTRY = "threads-state";
 const CONTEXT_MSG = "threads-context";
@@ -116,6 +156,30 @@ function assistantTexts(content: unknown): string[] {
 
 const openItems = (t: Thread) => t.items.filter((i) => !i.done && !i.dropped);
 const liveItems = (t: Thread) => t.items.filter((i) => !i.dropped);
+const TMUX_STOPWORDS = new Set("a an the and or of for to in on at with by from into make add set fix get use build create implement update improve so that it its this my our also can be is are should".split(" "));
+
+/** Short tmux-safe slug: lowercase, no '.'/':', max 3 words / 24 chars. Long goals lose filler words. */
+function tmuxSlug(s: string): string {
+	let words = s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9]+/).filter(Boolean);
+	if (words.length > 3) {
+		const core = words.filter((w) => !TMUX_STOPWORDS.has(w));
+		if (core.length) words = core;
+	}
+	let out = "";
+	for (const w of words.slice(0, 3)) {
+		const next = out ? `${out}-${w}` : w;
+		if (next.length > 24) break;
+		out = next;
+	}
+	return out || words[0]?.slice(0, 24) || "";
+}
+
+function tmux(args: string[]): Promise<string> {
+	return new Promise((resolve, reject) =>
+		execFile("tmux", args, { timeout: 3000 }, (err, stdout) => (err ? reject(err) : resolve(stdout))),
+	);
+}
+
 const kindIcon = (k: ItemKind) => (k === "goal" ? "◎" : k === "question" ? "?" : "☐");
 
 /** Threads ordered as a tree (parent before children), with depth. */
@@ -135,20 +199,31 @@ function treeOrder(state: State): { t: Thread; depth: number }[] {
 	return out;
 }
 
+/** Open threads that currently carry a question for the user. */
+const questionsOf = (state: State) => state.threads.filter((t) => t.status === "open" && t.prompt);
+
 /** Compact plain-text state for the model. */
 function stateForModel(state: State): string {
-	if (state.threads.length === 0) return "(no threads yet)";
 	const lines: string[] = [];
+	lines.push(`Goal: ${state.goal ?? "(not set)"}`);
+	if (state.next) lines.push(`Next: ${state.next}`);
+	if (state.threads.length === 0) {
+		lines.push("(no open points)");
+		return lines.join("\n");
+	}
 	for (const { t, depth } of treeOrder(state)) {
-		if (t.status === "resolved" && t.id !== state.active) {
-			lines.push(`${"  ".repeat(depth)}#${t.id} [resolved] ${t.title}`);
+		const pad = "  ".repeat(depth);
+		if (t.status === "resolved") {
+			lines.push(`${pad}#${t.id} [decided] ${t.title}${t.note ? ` → ${t.note}` : ""}`);
 			continue;
 		}
 		const mark = t.id === state.active ? " (ACTIVE)" : "";
-		lines.push(`${"  ".repeat(depth)}#${t.id} [${t.status}]${mark} ${t.title}`);
-		for (const i of liveItems(t)) {
-			lines.push(`${"  ".repeat(depth)}  ${i.done ? "[x]" : "[ ]"} ${i.id} (${i.kind}) ${i.text}`);
+		lines.push(`${pad}#${t.id} [${t.status}]${mark} ${t.title}${t.note && t.status === "parked" ? ` (${t.note})` : ""}`);
+		if (t.prompt && t.status === "open") {
+			const opts = (t.options ?? []).map((o, i) => (i === t.recommended ? `${o} (recommended)` : o));
+			lines.push(`${pad}  Q: ${t.prompt}${opts.length ? ` | options: ${opts.join(" / ")}` : ""}`);
 		}
+		for (const i of openItems(t)) lines.push(`${pad}  (legacy item) ${i.text}`);
 	}
 	return lines.join("\n");
 }
@@ -189,9 +264,51 @@ function applyOps(input: State, ops: Op[]): { state: State; log: string[]; error
 					nextItem: 1,
 				};
 				state.threads.push(t);
-				for (const text of o.items ?? []) addItem(t, text, o.kind);
 				if (o.activate !== false || state.active === undefined) state.active = t.id;
 				log.push(`opened #${t.id} ${t.title}${state.active === t.id ? " (active)" : ""}`);
+				break;
+			}
+			case "goal":
+			case "next": {
+				const v = o.text?.trim() || undefined;
+				if (o.op === "goal" && !v) {
+					errors.push("goal: text required");
+					break;
+				}
+				state[o.op] = v;
+				if (o.op === "goal") state.short = o.title?.trim() || undefined;
+				log.push(`${o.op}: ${v ?? "(cleared)"}${o.op === "goal" && state.short ? ` [${state.short}]` : ""}`);
+				break;
+			}
+			case "ask": {
+				if (!o.prompt) {
+					errors.push("ask: prompt required");
+					break;
+				}
+				let t: Thread | undefined;
+				if (o.thread !== undefined) {
+					t = state.threads.find((x) => x.id === o.thread);
+					if (!t) {
+						errors.push(`ask: thread #${o.thread} not found`);
+						break;
+					}
+					if (o.title) t.title = o.title;
+				} else {
+					if (!o.title) {
+						errors.push("ask: title required for a new question");
+						break;
+					}
+					t = { id: state.nextId++, title: o.title, parent: o.parent, status: "open", items: [], nextItem: 1 };
+					state.threads.push(t);
+				}
+				t.status = "open";
+				t.prompt = o.prompt;
+				t.options = (o.options ?? []).map((x) => x.trim()).filter(Boolean).slice(0, 6);
+				t.recommended =
+					o.recommended !== undefined && o.recommended >= 0 && o.recommended < t.options.length ? o.recommended : undefined;
+				t.idle = 0;
+				t.note = undefined;
+				log.push(`asked #${t.id} ${t.prompt}`);
 				break;
 			}
 			case "switch": {
@@ -244,6 +361,9 @@ function applyOps(input: State, ops: Op[]): { state: State; log: string[]; error
 				}
 				t.status = o.op === "resolve" ? "resolved" : o.op === "park" ? "parked" : "open";
 				if (o.note) t.note = o.note;
+				t.idle = 0;
+				// a decided question no longer waits for an answer
+				if (o.op === "resolve") t.prompt = undefined;
 				// resolve/park deliberately keep the active thread: only switch/open/reopen move it,
 				// so text written next is still attributed to the thread it is about.
 				if (o.op === "reopen") state.active = t.id;
@@ -322,27 +442,41 @@ function openFallback(state: State, id: number): number {
 	return [...state.threads].reverse().find((t) => t.status === "open")?.id ?? 0;
 }
 
-/** `#n ` at the start of a line in a USER message: the following lines are meant for thread n. */
-const USER_MARKER_RE = /^#(\d+)[ \t]+/gm;
+/**
+ * In a USER message, `#n `, `n. `, `n) ` or `n: ` at the start of a line (or after "; ")
+ * means the following text is meant for thread n. The numeric forms only count for
+ * threads that are not decided yet, so ordinary numbered lists stay untouched.
+ */
+const USER_MARKER_RE = /(?:^|(?<=;))[ \t]*(?:#(\d+)[ \t]+|(\d+)[.):][ \t]+)/gm;
 
 /** Split a user message into per-thread sections. Unmarked text (preamble) has thread undefined. */
-function splitUser(text: string, valid: (id: number) => boolean): { parts: { thread?: number; text: string }[]; ids: number[] } {
+function splitUser(
+	text: string,
+	valid: (id: number, hash: boolean) => boolean,
+): { parts: { thread?: number; text: string }[]; ids: number[] } {
 	const parts: { thread?: number; text: string }[] = [];
 	const ids: number[] = [];
 	let last = 0;
 	let thread: number | undefined;
+	const clean = (s: string) => s.trim().replace(/;\s*$/, "").trim();
 	for (const m of text.matchAll(USER_MARKER_RE)) {
-		const id = Number(m[1]);
-		if (!valid(id)) continue;
-		const chunk = text.slice(last, m.index).trim();
+		const id = Number(m[1] ?? m[2]);
+		if (!valid(id, m[1] !== undefined)) continue;
+		const chunk = clean(text.slice(last, m.index));
 		if (chunk) parts.push({ thread, text: chunk });
 		thread = id;
 		if (!ids.includes(id)) ids.push(id);
 		last = (m.index ?? 0) + m[0].length;
 	}
-	const rest = text.slice(last).trim();
+	const rest = clean(text.slice(last));
 	if (rest) parts.push({ thread, text: rest });
 	return { parts, ids };
+}
+
+/** May a user line address thread `id`? `#n` works for any thread, `n.` only for undecided ones. */
+function addressable(state: State, id: number, hash: boolean): boolean {
+	const t = state.threads.find((x) => x.id === id);
+	return !!t && (hash || t.status !== "resolved");
 }
 
 interface Replay {
@@ -366,6 +500,7 @@ function replay(ctx: ExtensionContext): Replay {
 	/** Thread of the last thing shown in the transcript (for dividers). */
 	let prev = 0;
 	const valid = (id: number) => state.threads.some((t) => t.id === id);
+	const userValid = (id: number, hash: boolean) => addressable(state, id, hash);
 
 	for (const entry of ctx.sessionManager.getBranch() as any[]) {
 		if (entry.type === "custom" && entry.customType === STATE_ENTRY && entry.data?.threads) {
@@ -381,7 +516,7 @@ function replay(ctx: ExtensionContext): Replay {
 		} else if (msg.role === "user") {
 			const text = textOf(msg.content);
 			if (!text.trim()) continue;
-			const split = splitUser(text, valid);
+			const split = splitUser(text, userValid);
 			userThreads = new Set();
 			pendingUser = undefined;
 			// a new message never continues in a resolved/parked thread
@@ -505,67 +640,102 @@ export default function threadsExtension(pi: ExtensionAPI) {
 		pi.appendEntry<State>(STATE_ENTRY, clone(state));
 	}
 
+	/**
+	 * Mirror the goal into the pi session name (selector, footer, terminal title).
+	 * Only overwrites a name we set ourselves (unset or equal to the previous goal),
+	 * so a manual `/name` always wins.
+	 */
+	function syncSessionName(prevGoal?: string) {
+		const goal = state.goal?.replace(/\s+/g, " ").trim();
+		if (!goal) return;
+		try {
+			const current = pi.getSessionName()?.trim();
+			if (current === goal) return;
+			if (!current || (prevGoal && current === prevGoal.replace(/\s+/g, " ").trim())) pi.setSessionName(goal);
+		} catch {
+			/* naming is cosmetic */
+		}
+	}
+
+	/** tmux name we derived from the previous goal in this process (to recognise our own names). */
+	let lastTmuxBase: string | undefined;
+
+	/**
+	 * Rename the tmux session this pi runs in to a short slug of the goal.
+	 * Only replaces tmux default names (numbers) or names we set ourselves; manual names win.
+	 */
+	async function syncTmuxName(prev?: { goal?: string; short?: string }) {
+		if (!process.env.TMUX || !state.goal) return;
+		const base = tmuxSlug(state.short || state.goal);
+		if (!base) return;
+		const ours = new Set([lastTmuxBase, prev?.goal ? tmuxSlug(prev.short || prev.goal) : undefined].filter(Boolean));
+		const pane = process.env.TMUX_PANE ? ["-t", process.env.TMUX_PANE] : [];
+		try {
+			const current = (await tmux(["display-message", "-p", ...pane, "#S"])).trim();
+			const currentBase = current.replace(/-\d+$/, "");
+			if (currentBase === base) return;
+			if (!/^\d+$/.test(current) && !ours.has(currentBase)) return; // user-chosen name
+			const taken = new Set((await tmux(["list-sessions", "-F", "#S"])).split("\n").map((s) => s.trim()));
+			let name = base;
+			for (let i = 2; taken.has(name); i++) name = `${base}-${i}`;
+			await tmux(["rename-session", "-t", current, name]);
+			lastTmuxBase = base;
+		} catch {
+			/* not in tmux / tmux missing: cosmetic */
+		}
+	}
+
 	// ------------------------------------------------------------ widget
 
 	function widgetLines(theme: Theme, width: number): string[] {
-		if (state.threads.length === 0) return [];
-		const open = state.threads.filter((t) => t.status !== "resolved");
-		const allItems = state.threads.flatMap(liveItems);
-		const doneCount = allItems.filter((i) => i.done).length;
-		const head =
-			theme.fg("accent", theme.bold("Threads")) +
-			theme.fg("muted", ` · ${open.length} open · ${doneCount}/${allItems.length} items done`) +
-			theme.fg("dim", "  (Alt+T board \u00b7 Alt+H hide \u00b7 /threads)");
+		if (!state.goal && state.threads.length === 0) return [];
+		const open = state.threads.filter((t) => t.status === "open");
+		const waiting = questionsOf(state);
+		const goal =
+			theme.fg("accent", theme.bold("◎ ")) +
+			(state.goal ? theme.bold(state.goal) : theme.fg("dim", "(no goal yet)")) +
+			(state.next ? theme.fg("muted", `  · next: ${state.next}`) : "");
+		const hint = waiting.length
+			? theme.fg("warning", `${waiting.length} question${waiting.length > 1 ? "s" : ""} waiting`) +
+				theme.fg("dim", " · Alt+Q answer")
+			: "";
 
 		if (widgetMode === "compact") {
-			const active = state.threads.find((t) => t.id === state.active);
-			const act = active
-				? theme.fg("accent", ` ▸ #${active.id} ${active.title}`) +
-					theme.fg("muted", ` [${openItems(active).length} open]`)
-				: "";
-			return [truncateToWidth(head + act, width)];
+			const extra = [open.length ? theme.fg("muted", `${open.length} open`) : "", hint].filter(Boolean);
+			return [truncateToWidth(goal + (extra.length ? theme.fg("dim", "  · ") + extra.join(theme.fg("dim", " · ")) : ""), width)];
 		}
 
-		const lines = [head];
-		const MAX = 14;
-		const resolved = state.threads.filter((t) => t.status === "resolved" && t.id !== state.active);
+		const lines = [goal];
+		const MAX = 12;
 		for (const { t, depth } of treeOrder(state)) {
-			if (t.status === "resolved" && t.id !== state.active) continue;
-			const isActive = t.id === state.active;
-			const items = liveItems(t);
-			const done = items.filter((i) => i.done).length;
-			const indent = "  ".repeat(depth);
-			const marker = isActive ? theme.fg("accent", "▸ ") : "  ";
-			const title = isActive ? theme.fg("accent", theme.bold(`#${t.id} ${t.title}`)) : `#${t.id} ${t.title}`;
-			const status =
-				t.status === "parked"
-					? theme.fg("warning", " ⏸ parked")
-					: t.status === "resolved"
-						? theme.fg("success", " ✓ resolved")
-						: "";
-			const count = items.length ? theme.fg(done === items.length ? "success" : "muted", ` ${done}/${items.length}`) : "";
-			lines.push(`${indent}${marker}${title}${count}${status}`);
-			// open items: all for the active thread, first 2 for others
-			const show = openItems(t);
-			const limit = isActive ? show.length : 2;
-			for (const i of show.slice(0, limit)) {
-				lines.push(`${indent}    ${theme.fg("muted", kindIcon(i.kind))} ${theme.fg("dim", i.id)} ${i.text}`);
+			if (t.status === "resolved") continue;
+			const indent = `  ${"  ".repeat(depth)}`;
+			const isActive = t.id === state.active && open.length > 1;
+			if (t.status === "parked") {
+				lines.push(theme.fg("dim", `${indent}⏸ #${t.id} ${t.title}`));
+				continue;
 			}
-			if (show.length > limit) lines.push(`${indent}    ${theme.fg("dim", `… ${show.length - limit} more`)}`);
+			const icon = t.prompt ? theme.fg("warning", "?") : isActive ? theme.fg("accent", "▸") : theme.fg("muted", "●");
+			const title = isActive ? theme.fg("accent", theme.bold(`#${t.id} ${t.title}`)) : theme.bold(`#${t.id} ${t.title}`);
+			const sub = t.prompt ? theme.fg("muted", ` — ${t.prompt}`) : "";
+			lines.push(`${indent}${icon} ${title}${sub}`);
+			for (const i of openItems(t).slice(0, 2)) lines.push(theme.fg("dim", `${indent}    · ${i.text}`));
 		}
-		if (resolved.length) {
+		const decided = state.threads.filter((t) => t.status === "resolved");
+		for (const t of decided.slice(-3)) {
 			lines.push(
-				theme.fg("success", "  ✓ ") +
-					theme.fg("dim", resolved.map((t) => `#${t.id} ${t.title}`).join(" · ")),
+				`  ${theme.fg("success", "✓")} ${theme.fg("dim", `#${t.id} ${t.title}`)}${t.note ? theme.fg("muted", ` → ${t.note}`) : ""}`,
 			);
 		}
+		if (decided.length > 3) lines.push(theme.fg("dim", `  … ${decided.length - 3} earlier decisions (/threads)`));
+		if (hint) lines.push(`  ${hint}`);
 		const out = lines.length > MAX ? [...lines.slice(0, MAX - 1), theme.fg("dim", `  … (${lines.length - MAX + 1} more lines – /threads)`)] : lines;
 		return out.map((l) => truncateToWidth(l, width));
 	}
 
 	function updateWidget(ctx: ExtensionContext) {
 		if (!ctx.hasUI) return;
-		if (widgetMode === "off" || state.threads.length === 0) {
+		if (widgetMode === "off" || (state.threads.length === 0 && !state.goal)) {
 			ctx.ui.setWidget("threads", undefined);
 		} else {
 			ctx.ui.setWidget("threads", (_tui, theme) => ({
@@ -578,9 +748,11 @@ export default function threadsExtension(pi: ExtensionAPI) {
 			"threads",
 			addressed.length
 				? ctx.ui.theme.fg("warning", `→ ${addressed.map((id) => `#${id}`).join(",")}`)
-				: active && widgetMode === "off"
-					? ctx.ui.theme.fg("accent", `#${active.id}`)
-					: undefined,
+				: widgetMode === "off" && questionsOf(state).length
+					? ctx.ui.theme.fg("warning", `? ${questionsOf(state).length} (Alt+Q)`)
+					: active && widgetMode === "off"
+						? ctx.ui.theme.fg("accent", `#${active.id}`)
+						: undefined,
 		);
 	}
 
@@ -591,8 +763,9 @@ export default function threadsExtension(pi: ExtensionAPI) {
 		const tag = tags.get(markdown) ?? tags.get(markdown.trim());
 		let out = markdown;
 		if (context.messageType === "user") {
-			out = out.replace(USER_MARKER_RE, (whole, id: string) =>
-				state.threads.some((t) => t.id === Number(id)) ? `\n*${label(Number(id))}*\n\n` : whole,
+			// only the explicit "#n " form becomes a divider; "4. answer" reads fine as is
+			out = out.replace(USER_MARKER_RE, (whole, id: string | undefined) =>
+				id && state.threads.some((t) => t.id === Number(id)) ? `\n*${label(Number(id))}*\n\n` : whole,
 			);
 		}
 		if (context.messageType === "assistant") {
@@ -619,7 +792,11 @@ export default function threadsExtension(pi: ExtensionAPI) {
 
 	// ------------------------------------------------------------ lifecycle
 
-	pi.on("session_start", async (_e, ctx) => rebuild(ctx));
+	pi.on("session_start", async (_e, ctx) => {
+		rebuild(ctx);
+		syncSessionName(); // name older sessions that have a goal but no name
+		void syncTmuxName();
+	});
 	pi.on("session_tree", async (_e, ctx) => {
 		rebuild(ctx);
 		await refreshTranscript(ctx);
@@ -639,7 +816,7 @@ export default function threadsExtension(pi: ExtensionAPI) {
 
 	/** Mark the threads addressed by "#n " lines of an outgoing user message. */
 	function addressFrom(text: string, ctx: ExtensionContext) {
-		const { ids } = splitUser(text, (id) => state.threads.some((t) => t.id === id));
+		const { ids } = splitUser(text, (id, hash) => addressable(state, id, hash));
 		if (ids.length) {
 			addressed = ids;
 			const before = JSON.stringify(state);
@@ -656,9 +833,26 @@ export default function threadsExtension(pi: ExtensionAPI) {
 
 	pi.on("before_agent_start", async (event, ctx) => {
 		if (event.messageType !== "user") return;
-		const snapshot = stateForModel(state);
 		const targets = addressed;
 		addressed = [];
+		// auto-park questions the user keeps not answering
+		const parked: number[] = [];
+		if (questionsOf(state).length) {
+			const next = clone(state);
+			for (const t of questionsOf(next)) {
+				if (targets.includes(t.id)) t.idle = 0;
+				else if ((t.idle = (t.idle ?? 0) + 1) >= AUTO_PARK) {
+					t.status = "parked";
+					t.note = "auto-parked: not answered";
+					t.idle = 0;
+					parked.push(t.id);
+				}
+			}
+			if (parked.includes(next.active ?? -1)) next.active = openFallback(next, 0) || undefined;
+			state = next;
+			persist();
+		}
+		const snapshot = stateForModel(state);
 		updateWidget(ctx);
 		if (targets.length === 0 && (snapshot === lastInjected || state.threads.length === 0)) return;
 		lastInjected = snapshot;
@@ -684,39 +878,41 @@ export default function threadsExtension(pi: ExtensionAPI) {
 	// ------------------------------------------------------------ tool
 
 	const OpSchema = Type.Object({
-		op: StringEnum(["open", "switch", "add", "done", "undo", "drop", "resolve", "park", "reopen", "rename", "list"] as const),
-		thread: Type.Optional(Type.Number({ description: "Thread id (defaults to the active thread where sensible)" })),
-		question: Type.Optional(
-			Type.String({ description: "open: the user's question/request that starts this thread, quoted (short excerpt)" }),
+		op: StringEnum(["goal", "next", "ask", "open", "switch", "resolve", "park", "reopen", "rename", "list"] as const),
+		thread: Type.Optional(
+			Type.Number({ description: "Thread id (ask: update this existing question instead of creating one; others: defaults to active)" }),
 		),
-		title: Type.Optional(Type.String({ description: "Thread title (open, rename) – short, 2-6 words" })),
-		parent: Type.Optional(Type.Number({ description: "Parent thread id when this thread branches off another (open)" })),
+		title: Type.Optional(
+			Type.String({ description: "Short label, 2-5 words (ask, open, rename); goal: 1-3 word short name, e.g. 'tmux autoname'" }),
+		),
+		text: Type.Optional(Type.String({ description: "goal / next: one line (next: empty clears it)" })),
+		prompt: Type.Optional(Type.String({ description: "ask: the question to the user, one sentence" })),
+		options: Type.Optional(
+			Type.Array(Type.String(), { description: "ask: 2-4 prepared answers, short and concrete (the user can always type their own)" }),
+		),
+		recommended: Type.Optional(Type.Number({ description: "ask: index into options of your recommendation" })),
+		question: Type.Optional(Type.String({ description: "open: short quote of what started this side discussion" })),
+		parent: Type.Optional(Type.Number({ description: "ask/open: thread this one branches off" })),
 		activate: Type.Optional(Type.Boolean({ description: "open: make it the active thread (default true)" })),
-		text: Type.Optional(Type.String({ description: "Item text (add)" })),
-		items: Type.Optional(
-			Type.Array(Type.String(), { description: "Item texts (open/add) or item ids like '2.1' (done/undo/drop)" }),
-		),
-		item: Type.Optional(Type.String({ description: "Item id like '2.1' (done/undo/drop)" })),
-		kind: Type.Optional(StringEnum(["goal", "task", "question"] as const, { description: "Item kind, default task" })),
-		note: Type.Optional(Type.String({ description: "Outcome / reason (resolve, park)" })),
+		note: Type.Optional(Type.String({ description: "resolve: the decision/outcome in ≤12 words; park: reason" })),
 	});
 
 	pi.registerTool({
 		name: TOOL,
 		label: "Thread",
 		description:
-			"Organize this conversation into logical threads (topics/questions) and track their goals, tasks and open questions. " +
-			"Pass several ops at once. Ops: open{title,question?,parent?,items?,kind?,activate?} (creates; activates unless activate:false), switch{thread}, " +
-			"add{thread?,text|items,kind?}, done|undo|drop{item|items}, resolve|park|reopen{thread,note?}, rename{thread,title}, list.",
-		promptSnippet: "Track conversation threads (topics) and their open goals/tasks/questions",
+			"Keep the session anchored: its goal, the questions you are waiting on the user for (with prepared answers), side discussions, and the decisions made. " +
+			"Pass several ops at once. Ops: goal{text}, next{text}, ask{title,prompt,options,recommended?,parent?} (new question) / ask{thread,prompt,options,...} (follow-up, same number), " +
+			"open{title,question?,parent?,activate?} (side discussion), switch{thread}, resolve{thread,note=decision}, park{thread,note?}, reopen{thread}, rename{thread,title}, list.",
+		promptSnippet: "Session goal, questions to the user with prepared answers, side discussions, decision log",
 		promptGuidelines: [
-			"Keep the conversation organized with the `thread` tool. On the first substantive request, open a thread for the main goal with its goals/tasks as items.",
-			"When a new, distinct question or side topic comes up (one that may get follow-ups), open a new thread for it (with `parent` if it branches off another) instead of mixing it into the current one. Do not open threads for trivial one-line clarifications. Pass `question` with a short quote of the user's request that started the thread.",
-			"Once threads exist, start every visible reply (and every part of a reply that belongs to a different thread) with a marker line `[[#n]]` naming the thread it belongs to. The UI renders the marker as a divider and files the text under that thread; the last marker also makes that thread active. A reply covering several threads = several marked sections, e.g. `[[#2]]` answer to the side question, then `[[#1]]` continuation of the main task. Text without a marker belongs to the currently active thread.",
-			"Never tick or resolve a question without also answering it visibly in a marked section of your reply (the user cannot see your thinking or tool arguments).",
-			"Keep items current: add newly discovered tasks/questions, mark items done as you complete them, resolve a thread (short note) when its goal is reached, park threads the user defers. Do the `thread` bookkeeping (open/done/resolve) BEFORE writing the visible reply, and write the reply as your final message with no tool call after it \u2013 text followed by a tool call in the same message can end up hidden from the user.",
-			"Batch thread ops into a single `thread` call where possible, and call it in parallel with other tools rather than as a separate step when you can.",
-			"A hidden [threads] message shows the current thread state; lines starting with '#<n> ' in a user message are addressed to thread n (one message can address several threads; answer each in its own [[#n]] section of a single reply).",
+			"`thread` tool – GOAL: on the first substantive request set `goal` (one line: what this session is about) and pass `title` with a 1-3 word short name for it (used as tmux session name). Change it only if the user clearly pivots. Optionally keep ONE `next` step. There are no task lists: never track your own work steps here.",
+			"`thread` tool – QUESTIONS: whenever you need the user to decide or answer something, register each question with `ask` (title 2-5 words, one-sentence prompt, 2-4 short concrete options, `recommended` = your pick). In the visible reply, list them with their thread number, e.g. `**#4 Ban duration** – How long …? (recommended: 1 h)`. The user answers with lines like `4. 1 hour` / `#4 …`, or via an answer picker. Don't `ask` rhetorical or trivial yes/no confirmations.",
+			"`thread` tool – FOLLOW-UPS & CLOSING: when an answer leads to a follow-up question on the same point, `ask{thread:n,…}` again (same number). As soon as a point is settled, `resolve{thread:n, note}` with the decision in ≤12 words (e.g. \"1 h ban, IPv6 included\") – these notes are the session's decision log. Unanswered questions are auto-parked after a few user messages; re-`ask` them only if still relevant.",
+			"`thread` tool – SIDE DISCUSSIONS: `open` a thread only when a distinct topic branches off while other work is unfinished. Never open a thread for the main line of work itself. Resolve it with a short outcome note when done.",
+			"Markers: only when your reply covers 2+ threads (e.g. the user answered #4 and #6), start each part with a marker line `[[#n]]`; text after it is filed under thread n. With a single topic, write no markers.",
+			"Do `thread` ops BEFORE writing the visible reply and batch them into one call (parallel with other tools when possible); write the reply as your final message with no tool call after it. Skip the tool entirely when nothing changed. Never resolve a question without answering/confirming it visibly in the reply.",
+			"A hidden [threads] message shows the current state (goal, open points, decisions). User lines starting with `#n `, `n. `, `n) ` or `n: ` address thread n; answer each addressed thread (in its own [[#n]] section if there are several).",
 		],
 		parameters: Type.Object({ ops: Type.Array(OpSchema, { minItems: 1 }) }),
 
@@ -725,12 +921,18 @@ export default function threadsExtension(pi: ExtensionAPI) {
 			// markers written earlier in this turn may have moved the active thread
 			const cur = replay(ctx).cursor;
 			if (cur && state.threads.some((t) => t.id === cur)) state.active = cur;
+			const prevGoal = state.goal;
+			const prevShort = state.short;
 			const r = applyOps(state, ops);
 			// atomic: on any error nothing is applied, so the model can't half-apply a batch
 			if (r.errors.length) {
 				r.log.length = 0;
 				r.errors.push("No ops were applied (batch is atomic). Fix and retry.");
-			} else state = r.state;
+			} else {
+				state = r.state;
+				if (state.goal !== prevGoal) syncSessionName(prevGoal);
+				if (state.goal !== prevGoal || state.short !== prevShort) void syncTmuxName({ goal: prevGoal, short: prevShort });
+			}
 			updateWidget(ctx);
 			const text = [
 				...r.log,
@@ -749,31 +951,93 @@ export default function threadsExtension(pi: ExtensionAPI) {
 
 		renderCall(args, theme) {
 			const ops = ((args as { ops?: Op[] }).ops ?? []) as Op[];
-			const parts = ops.map((o) => {
-				switch (o.op) {
-					case "open":
-						return theme.fg("accent", `+ ${o.title ?? ""}`);
-					case "switch":
-						return theme.fg("accent", `⤷ #${o.thread}${o.thread ? ` ${titleOf(o.thread)}` : ""}`);
-					case "done":
-						return theme.fg("success", `✓ ${[o.item, ...(o.items ?? [])].filter(Boolean).join(",")}`);
-					case "add":
-						return theme.fg("muted", `+item ${[o.text, ...(o.items ?? [])].filter(Boolean).length}`);
-					default:
-						return theme.fg("muted", `${o.op}${o.thread ? ` #${o.thread}` : ""}${o.item ? ` ${o.item}` : ""}`);
-				}
-			});
-			return { render: (w: number) => [truncateToWidth(theme.fg("toolTitle", theme.bold("thread ")) + parts.join(theme.fg("dim", " · ")), w)], invalidate: () => {} };
+			// Header is a short summary; the result lists what changed in words.
+			const count = (p: (o: Op) => boolean) => ops.filter(p).length;
+			const asks = count((o) => o.op === "ask");
+			const decided = count((o) => o.op === "resolve");
+			const parts = [
+				count((o) => o.op === "goal") ? "goal" : "",
+				asks ? `${asks} question${asks > 1 ? "s" : ""}` : "",
+				decided ? `${decided} decided` : "",
+				count((o) => o.op === "open") ? "side topic" : "",
+			].filter(Boolean);
+			const summary = parts.length ? theme.fg("muted", parts.join(" · ")) : "";
+			return { render: (w: number) => [truncateToWidth(theme.fg("toolTitle", theme.bold("thread ")) + summary, w)], invalidate: () => {} };
 		},
 
 		renderResult(result, { expanded }, theme) {
 			const d = result.details as ToolDetails | undefined;
 			const lines: string[] = [];
 			if (d) {
-				for (const l of d.log) lines.push(theme.fg("muted", l));
+				const s = d.state;
+				const item = (ref: string) => s.threads.flatMap((t) => t.items).find((i) => i.id === ref);
+				const thr = (id?: number) => s.threads.find((t) => t.id === (id ?? s.active));
+				if (!d.errors.length) {
+					let movedActive = false;
+					for (const o of d.ops ?? []) {
+						const refs = [...(o.item ? [o.item] : []), ...(o.items ?? [])];
+						switch (o.op) {
+							case "goal":
+								lines.push(theme.fg("accent", "◎ goal: ") + (o.text ?? ""));
+								break;
+							case "next":
+								lines.push(theme.fg("muted", `→ next: ${o.text?.trim() || "(cleared)"}`));
+								break;
+							case "ask": {
+								const t =
+									o.thread !== undefined ? thr(o.thread) : [...s.threads].reverse().find((x) => x.title === o.title);
+								lines.push(
+									theme.fg("warning", `? #${t?.id ?? "?"} `) + theme.bold(t?.title ?? o.title ?? "") + theme.fg("muted", ` — ${o.prompt ?? ""}`),
+								);
+								const opts = (o.options ?? []).map((x, i) => (i === o.recommended ? theme.fg("success", `${x} ★`) : x));
+								if (opts.length) lines.push(`    ${opts.join(theme.fg("dim", " · "))}`);
+								break;
+							}
+							case "open": {
+								lines.push(theme.fg("accent", `+ side topic: ${o.title ?? ""}`));
+								for (const t of o.items ?? []) lines.push(theme.fg("muted", `    ☐ ${t}`));
+								if (o.activate !== false) movedActive = true;
+								break;
+							}
+							case "add":
+								for (const t of [...(o.text ? [o.text] : []), ...(o.items ?? [])])
+									lines.push(theme.fg("muted", `☐ ${t}`));
+								break;
+							case "done":
+								for (const r of refs) lines.push(theme.fg("success", "✓ ") + (item(r)?.text ?? r));
+								break;
+							case "undo":
+								for (const r of refs) lines.push(theme.fg("warning", "↺ ") + (item(r)?.text ?? r));
+								break;
+							case "drop":
+								for (const r of refs) lines.push(theme.fg("dim", `✗ ${item(r)?.text ?? r}`));
+								break;
+							case "resolve":
+							case "park":
+							case "reopen": {
+								const verb = o.op === "resolve" ? "✓" : o.op === "park" ? "⏸ parked" : "↺ reopened";
+								const col = o.op === "resolve" ? "success" : "warning";
+								const t = thr(o.thread);
+								lines.push(
+									theme.fg(col, `${verb} `) +
+										(t ? `#${t.id} ${t.title}` : "") +
+										(o.note ? theme.fg(o.op === "resolve" ? "text" : "dim", ` → ${o.note}`) : ""),
+								);
+								if (o.op === "reopen") movedActive = true;
+								break;
+							}
+							case "rename":
+								lines.push(theme.fg("muted", `renamed → ${o.title ?? ""}`));
+								break;
+							case "switch":
+								movedActive = true;
+								break;
+						}
+					}
+					const active = thr(s.active);
+					if (movedActive && active) lines.push(theme.fg("accent", `▸ now in: ${active.title}`));
+				}
 				for (const e of d.errors) lines.push(theme.fg("error", e));
-				const active = d.state.threads.find((t) => t.id === d.state.active);
-				if (active) lines.push(theme.fg("accent", `▸ active: #${active.id} ${active.title}`));
 				if (expanded) lines.push("", ...stateForModel(d.state).split("\n").map((l) => theme.fg("dim", l)));
 			}
 			return { render: (w: number) => lines.map((l) => truncateToWidth(l, w)), invalidate: () => {} };
@@ -1056,6 +1320,13 @@ export default function threadsExtension(pi: ExtensionAPI) {
 									width,
 								),
 							);
+						if (t.prompt && t.status === "open")
+							out.push(
+								truncateToWidth(
+									theme.fg("warning", "  ? ") + t.prompt + theme.fg("dim", (t.options ?? []).length ? `  (${t.options!.join(" / ")})` : ""),
+									width,
+								),
+							);
 					}
 					const edLines = ed.render(width);
 					const hasText = ed.getText().trim().length > 0;
@@ -1118,6 +1389,209 @@ export default function threadsExtension(pi: ExtensionAPI) {
 			invalidate() {
 				mdCache.clear();
 				for (const ed of editors.values()) ed.invalidate?.();
+			},
+		};
+	}
+
+	// ------------------------------------------------------------ answer picker
+
+	/** Picked/typed answers not yet put into the editor (kept when the picker is closed with Esc). */
+	const pickerDrafts = new Map<number, string>();
+	let pickerOpen = false;
+
+	pi.registerShortcut(Key.alt("q"), {
+		description: "Answer open questions by picking prepared answers",
+		handler: async (ctx) => openPicker(ctx),
+	});
+
+	pi.registerCommand("answer", {
+		description: "Answer open questions by picking prepared answers (also Alt+Q)",
+		handler: async (_args, ctx) => openPicker(ctx),
+	});
+
+	async function openPicker(ctx: ExtensionContext) {
+		if (ctx.mode !== "tui" || !ctx.hasUI) {
+			ctx.ui.notify("The answer picker needs interactive mode", "error");
+			return;
+		}
+		if (pickerOpen) return;
+		const qs = questionsOf(state);
+		if (qs.length === 0) {
+			ctx.ui.notify("No open questions", "info");
+			return;
+		}
+		pickerOpen = true;
+		try {
+			const answers = await ctx.ui.custom<Map<number, string> | undefined>((tui, theme, _kb, done) =>
+				createPicker(tui, theme, done, qs),
+			);
+			if (!answers || answers.size === 0) return;
+			const lines = qs.filter((q) => answers.has(q.id)).map((q) => `${q.id}. ${answers.get(q.id)}`);
+			for (const q of qs) pickerDrafts.delete(q.id);
+			const existing = (ctx.ui as any).getEditorText?.() as string | undefined;
+			ctx.ui.setEditorText([existing?.trim(), ...lines].filter(Boolean).join("\n"));
+			ctx.ui.notify("Answers are in the editor – edit if needed, Enter sends", "info");
+		} finally {
+			pickerOpen = false;
+		}
+	}
+
+	function createPicker(tui: any, theme: Theme, done: (v: Map<number, string> | undefined) => void, qs: Thread[]) {
+		const answers = new Map<number, string>();
+		for (const q of qs) if (pickerDrafts.has(q.id)) answers.set(q.id, pickerDrafts.get(q.id)!);
+		const single = qs.length === 1;
+		const tabs = single ? 1 : qs.length + 1; // last tab = submit
+		let tab = Math.max(0, qs.findIndex((q) => !answers.has(q.id)));
+		let typing = false;
+		const editor = new Editor(tui, {
+			borderColor: (s: string) => theme.fg("accent", s),
+			selectList: {
+				selectedPrefix: (s: string) => theme.fg("accent", s),
+				selectedText: (s: string) => theme.fg("accent", s),
+				description: (s: string) => theme.fg("muted", s),
+				scrollInfo: (s: string) => theme.fg("dim", s),
+				noMatch: (s: string) => theme.fg("warning", s),
+			},
+		} as any);
+		type Row = { label: string; kind: "option" | "own" | "skip" };
+		const rows = (q: Thread): Row[] => [
+			...(q.options ?? []).map((o, i) => ({ label: i === q.recommended ? `${o}  ★ recommended` : o, kind: "option" as const })),
+			{ label: "✎ Type my own answer…", kind: "own" },
+			{ label: "↷ Skip for now", kind: "skip" },
+		];
+		/** Default cursor: previous answer, else the recommendation, else the first option. */
+		const defaultRow = (q: Thread) => {
+			const a = answers.get(q.id);
+			const prev = a !== undefined ? (q.options ?? []).indexOf(a) : -1;
+			if (prev >= 0) return prev;
+			if (a !== undefined) return (q.options ?? []).length; // own answer
+			return q.recommended ?? 0;
+		};
+		let row = qs[tab] ? defaultRow(qs[tab]) : 0;
+		const go = (t: number) => {
+			tab = (t + tabs) % tabs;
+			if (qs[tab]) row = defaultRow(qs[tab]);
+			typing = false;
+		};
+		const finish = () => done(new Map(answers));
+		const advance = () => {
+			if (single) return finish();
+			const nextOpen = qs.findIndex((q, i) => i > tab && !answers.has(q.id));
+			go(nextOpen >= 0 ? nextOpen : qs.length);
+		};
+		const save = () => {
+			pickerDrafts.clear();
+			for (const [k, v] of answers) pickerDrafts.set(k, v);
+		};
+		editor.onSubmit = (value: string) => {
+			const q = qs[tab];
+			if (!q) return;
+			if (value.trim()) answers.set(q.id, value.trim());
+			typing = false;
+			editor.setText("");
+			advance();
+			tui.requestRender();
+		};
+
+		return {
+			render(width: number): string[] {
+				const out: string[] = [theme.fg("accent", "─".repeat(width))];
+				const wrap = (prefix: string, text: string) => {
+					const w = Math.max(10, width - visibleWidth(prefix));
+					wrapTextWithAnsi(text, w).forEach((l, i) => out.push(`${i ? " ".repeat(visibleWidth(prefix)) : prefix}${l}`));
+				};
+				if (state.goal) out.push(truncateToWidth(theme.fg("dim", ` ◎ ${state.goal}`), width));
+				if (!single) {
+					const bar = qs.map((q, i) => {
+						const text = ` ${answers.has(q.id) ? "■" : "□"} #${q.id} ${q.title} `;
+						return i === tab ? theme.bg("selectedBg", theme.fg("text", text)) : theme.fg(answers.has(q.id) ? "success" : "muted", text);
+					});
+					const sub = " ✓ Done ";
+					bar.push(tab === qs.length ? theme.bg("selectedBg", theme.fg("text", sub)) : theme.fg(answers.size ? "success" : "dim", sub));
+					wrap(" ", bar.join(" "));
+				}
+				out.push("");
+				const q = qs[tab];
+				if (!q) {
+					wrap(" ", theme.fg("accent", theme.bold("Your answers")));
+					for (const x of qs) {
+						const a = answers.get(x.id);
+						wrap("   ", `${theme.fg("muted", `${x.id}. ${x.title}: `)}${a ?? theme.fg("dim", "(skipped – stays open)")}`);
+					}
+					out.push("");
+					wrap(" ", answers.size ? theme.fg("success", "Enter: put answers into the editor") : theme.fg("warning", "Nothing answered yet"));
+				} else {
+					wrap(" ", theme.bold(q.prompt ?? ""));
+					out.push("");
+					rows(q).forEach((r, i) => {
+						const sel = i === row;
+						const picked = r.kind === "option" && answers.get(q.id) === q.options?.[i];
+						const color = sel ? "accent" : r.kind === "option" ? "text" : "muted";
+						wrap(sel ? theme.fg("accent", " > ") : "   ", theme.fg(color, `${r.kind === "option" ? `${i + 1}. ` : ""}${r.label}${picked ? " ✓" : ""}`));
+					});
+					const own = answers.get(q.id);
+					if (own && !(q.options ?? []).includes(own)) wrap("     ", theme.fg("success", `your answer: ${own}`));
+					editor.focused = typing;
+					if (typing) {
+						out.push("");
+						for (const l of editor.render(Math.max(10, width - 2))) out.push(` ${l}`);
+					}
+				}
+				out.push("");
+				const help = typing
+					? "Enter save · Shift+Enter newline · Esc back to options"
+					: `↑↓ choose · 1-9 pick · Enter select${single ? "" : " · Tab/←→ question"} · Esc close (answers kept)`;
+				wrap(" ", theme.fg("dim", help));
+				out.push(theme.fg("accent", "─".repeat(width)));
+				return out.map((l) => truncateToWidth(l, width));
+			},
+			handleInput(data: string) {
+				if (typing) {
+					if (matchesKey(data, Key.escape)) {
+						typing = false;
+						editor.setText("");
+					} else editor.handleInput(data);
+					return tui.requestRender();
+				}
+				if (matchesKey(data, Key.escape) || matchesKey(data, Key.alt("q"))) {
+					save();
+					return done(undefined);
+				}
+				if (!single && (matchesKey(data, Key.tab) || matchesKey(data, Key.right))) go(tab + 1);
+				else if (!single && (matchesKey(data, Key.shift("tab")) || matchesKey(data, Key.left))) go(tab - 1);
+				else if (!qs[tab]) {
+					if (matchesKey(data, Key.enter) && answers.size) return finish();
+					return;
+				} else {
+					const q = qs[tab];
+					const rs = rows(q);
+					const pick = (i: number) => {
+						const r = rs[i];
+						row = i;
+						if (r.kind === "own") {
+							typing = true;
+							const prev = answers.get(q.id);
+							editor.setText(prev && !(q.options ?? []).includes(prev) ? prev : "");
+							return;
+						}
+						if (r.kind === "skip") answers.delete(q.id);
+						else answers.set(q.id, q.options![i]);
+						if (single && r.kind === "skip") {
+							save();
+							return done(undefined);
+						}
+						advance();
+					};
+					if (matchesKey(data, Key.up)) row = (row - 1 + rs.length) % rs.length;
+					else if (matchesKey(data, Key.down)) row = (row + 1) % rs.length;
+					else if (matchesKey(data, Key.enter)) pick(row);
+					else if (/^[1-9]$/.test(data) && Number(data) <= (q.options ?? []).length) pick(Number(data) - 1);
+					else return;
+				}
+				tui.requestRender();
+			},
+			invalidate() {
+				editor.invalidate?.();
 			},
 		};
 	}

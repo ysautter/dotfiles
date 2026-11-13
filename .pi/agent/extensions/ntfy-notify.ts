@@ -2,10 +2,16 @@
  * ntfy Notify Extension
  *
  * Sends a push notification via ntfy when the agent has finished
- * (`agent_settled`) and you have not interacted with pi for N seconds
- * (default 60). Any keypress in the pi terminal (typing in the editor,
- * scrolling, shortcuts, ...) restarts the countdown; submitting a prompt or
- * a new agent run cancels it. At most one notification per finished run.
+ * (`agent_settled`) and you have NOT seen the result within N seconds
+ * (default 60). At most one notification per finished run.
+ *
+ * "Seen" means any of these happened after the run finished:
+ * - the pi terminal gained focus (focus-in report; kitty + tmux pane/window)
+ * - the terminal was focused and you did something: keypress, mouse, scroll
+ *   in pi, or moved the mouse cursor anywhere (Hyprland `hyprctl cursorpos`)
+ * - you submitted a prompt / a new run started
+ * Terminal focused but no activity for N seconds => you're away => notify.
+ * Terminal unfocused (other window/tmux pane) => notify after N seconds.
  *
  * Only active in interactive TUI mode (never in print/json/rpc, so
  * subagents don't spam you).
@@ -22,6 +28,7 @@
  *   /ntfy test        - send a test notification now
  */
 
+import { execFile } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
@@ -66,9 +73,28 @@ function loadNtfyAuth(): Auth {
 	return auth;
 }
 
-/** Terminal reports that are not user activity (focus in/out, color scheme, cursor pos). */
-function isTerminalReport(data: string): boolean {
-	return /^\x1b\[[IO]$/.test(data) || /^\x1b\[\?\d+(;\d+)*[nc]$/.test(data) || /^\x1b\[\d+;\d+R$/.test(data);
+const FOCUS_IN = "\x1b[I";
+const FOCUS_OUT = "\x1b[O";
+
+/** Strip focus and terminal reports (color scheme, DA, cursor pos); what's left is user input. */
+function stripReports(data: string): string {
+	return data
+		.split(FOCUS_IN)
+		.join("")
+		.split(FOCUS_OUT)
+		.join("")
+		.replace(/\x1b\[\?[\d;]*[nc]/g, "")
+		.replace(/\x1b\[\d+;\d+R/g, "")
+		.replace(/\x1b\][^\x07\x1b]*(\x07|\x1b\\)/g, "");
+}
+
+function cursorPos(): Promise<string | undefined> {
+	if (!process.env.HYPRLAND_INSTANCE_SIGNATURE) return Promise.resolve(undefined);
+	return new Promise((resolve) => {
+		execFile("hyprctl", ["cursorpos"], { timeout: 2000 }, (err, stdout) => {
+			resolve(err ? undefined : stdout.trim());
+		});
+	});
 }
 
 function lastAssistantText(ctx: ExtensionContext): string {
@@ -100,11 +126,40 @@ export default function (pi: ExtensionAPI) {
 	let pending: { ctx: ExtensionContext; aborted: boolean; title?: string; message?: string } | undefined;
 	let unsubscribeInput: (() => void) | undefined;
 	let sessionCtx: ExtensionContext | undefined;
+	let pollTimer: ReturnType<typeof setInterval> | undefined;
+	/** Terminal focus as reported by focus-in/out events; assume focused until told otherwise. */
+	let focused = true;
 
 	const cancel = () => {
 		if (timer) clearTimeout(timer);
+		if (pollTimer) clearInterval(pollTimer);
 		timer = undefined;
+		pollTimer = undefined;
 		pending = undefined;
+	};
+
+	/**
+	 * Raw stdin tap (pi's own viewport listener swallows focus reports before
+	 * extension input listeners see them, so listen on the stream directly).
+	 */
+	const onStdin = (chunk: Buffer | string) => {
+		const data = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+		const lastIn = data.lastIndexOf(FOCUS_IN);
+		const lastOut = data.lastIndexOf(FOCUS_OUT);
+		if (lastIn > lastOut) {
+			focused = true;
+			if (pending) cancel(); // you switched to pi: seen
+		} else if (lastOut > lastIn) {
+			focused = false;
+		}
+		if (stripReports(data).length > 0) {
+			focused = true; // input only arrives while focused
+			if (pending) cancel(); // key/mouse/scroll in pi: seen
+		}
+	};
+
+	const detachStdin = () => {
+		process.stdin.off("data", onStdin);
 	};
 
 	const persist = () => {
@@ -144,6 +199,23 @@ export default function (pi: ExtensionAPI) {
 	const arm = () => {
 		if (!pending) return;
 		if (timer) clearTimeout(timer);
+		if (pollTimer) clearInterval(pollTimer);
+		pollTimer = undefined;
+
+		// Terminal focused but maybe nobody at the desk: any mouse movement
+		// (Hyprland) while pi is focused counts as "seen".
+		if (process.env.HYPRLAND_INSTANCE_SIGNATURE) {
+			const armed = pending;
+			void cursorPos().then((start) => {
+				if (start === undefined || pending !== armed) return;
+				pollTimer = setInterval(async () => {
+					if (!focused || pending !== armed) return;
+					const now = await cursorPos();
+					if (now !== undefined && now !== start && focused && pending === armed) cancel();
+				}, 3000);
+			});
+		}
+
 		timer = setTimeout(async () => {
 			const p = pending;
 			cancel();
@@ -171,11 +243,15 @@ export default function (pi: ExtensionAPI) {
 		sessionCtx = undefined;
 		if (ctx.mode !== "tui" || !ctx.hasUI) return;
 		sessionCtx = ctx;
-		// Every keypress counts as "you're here": restart the countdown.
-		unsubscribeInput = ctx.ui.onTerminalInput((data: string) => {
-			if (pending && !isTerminalReport(data)) arm();
-			return undefined;
-		});
+		focused = true;
+		// Make sure focus reporting is on (pi enables it with mouse support; idempotent).
+		if (process.stdout.isTTY) process.stdout.write("\x1b[?1004h");
+		detachStdin();
+		process.stdin.on("data", onStdin);
+		unsubscribeInput = () => {
+			detachStdin();
+			if (process.stdout.isTTY) process.stdout.write("\x1b[?1004l");
+		};
 	});
 
 	pi.on("agent_settled", (event, ctx) => {
@@ -233,7 +309,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			const host = config.host ?? loadNtfyAuth().host ?? "https://ntfy.sh";
 			ctx.ui.notify(
-				`ntfy notifications ${config.enabled ? "enabled" : "disabled"} - ${host}/${config.topic}, after ${config.delaySeconds}s idle`,
+				`ntfy notifications ${config.enabled ? "enabled" : "disabled"} - ${host}/${config.topic}, after ${config.delaySeconds}s unseen (terminal ${focused ? "focused" : "unfocused"})`,
 			);
 		},
 	});
