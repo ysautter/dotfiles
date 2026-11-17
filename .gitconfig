@@ -1,6 +1,6 @@
 [user]
 	name = Yannick
-	email = y.sautter@tuxguard.com
+	email = y.sautter@groupios.com
 [merge]
 	tool = kdiff3
 [mergetool "kdiff3"]
