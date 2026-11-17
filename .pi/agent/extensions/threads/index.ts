@@ -36,6 +36,8 @@
  *   /board  (Alt+T)      all open threads on one screen, a reply box per thread,
  *                        Enter sends all replies as ONE message ("#n " sections)
  *   /thread-widget [full|compact|off]   (also Alt+H cycles; persisted in threads.json)
+ *   /thread-columns [on|off]  replies covering 2+ threads are shown side by side (one column
+ *                        per thread, your answer to it on top); the sequential text is hidden
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -129,6 +131,8 @@ interface Op {
 const AUTO_PARK = 3;
 
 const STATE_ENTRY = "threads-state";
+/** TUI-only card that shows a multi-thread reply as side-by-side columns. */
+const COLUMNS_ENTRY = "threads-columns";
 const CONTEXT_MSG = "threads-context";
 const TOOL = "thread";
 
@@ -486,6 +490,30 @@ interface Replay {
 	cursor: number;
 	/** Rendered-markdown key -> thread for dividers on unmarked blocks / user messages. */
 	tags: Map<string, number>;
+	/** Per-thread parts of the latest user message (thread undefined = general text). */
+	lastUser: { thread?: number; text: string }[];
+	/** Assistant text blocks already shown as a column card (hidden in the transcript). */
+	collapsed: Set<string>;
+}
+
+interface CardColumn {
+	id: number;
+	title: string;
+	status: ThreadStatus;
+	waiting: boolean;
+	/** What the user wrote to this thread in the prompt this reply answers. */
+	user: string[];
+	text: string;
+}
+
+interface ColumnCard {
+	/** Unaddressed user text (shown full width above the columns). */
+	user?: string;
+	/** Reply text before the first marker (full width). */
+	preamble?: string;
+	columns: CardColumn[];
+	/** Assistant text blocks this card replaces in the transcript. */
+	blocks: string[];
 }
 
 /** Walk the active branch: final state + every user/assistant text attributed to a thread. */
@@ -493,6 +521,8 @@ function replay(ctx: ExtensionContext): Replay {
 	let state = emptyState();
 	const segments: Segment[] = [];
 	const tags = new Map<string, number>();
+	const collapsed = new Set<string>();
+	let lastUser: { thread?: number; text: string }[] = [];
 	let pendingUser: Segment | undefined;
 	/** Threads the latest user message has been attributed to (it may span several). */
 	let userThreads = new Set<number>();
@@ -508,6 +538,10 @@ function replay(ctx: ExtensionContext): Replay {
 			cursor = state.active ?? 0;
 			continue;
 		}
+		if (entry.type === "custom" && entry.customType === COLUMNS_ENTRY && Array.isArray(entry.data?.blocks)) {
+			for (const b of entry.data.blocks as string[]) collapsed.add(b.trim());
+			continue;
+		}
 		if (entry.type !== "message") continue;
 		const msg = entry.message;
 		if (msg.role === "toolResult" && msg.toolName === TOOL && msg.details?.state) {
@@ -517,6 +551,7 @@ function replay(ctx: ExtensionContext): Replay {
 			const text = textOf(msg.content);
 			if (!text.trim()) continue;
 			const split = splitUser(text, userValid);
+			lastUser = split.ids.length ? split.parts : [{ text: text.trim() }];
 			userThreads = new Set();
 			pendingUser = undefined;
 			// a new message never continues in a resolved/parked thread
@@ -561,7 +596,107 @@ function replay(ctx: ExtensionContext): Replay {
 			}
 		}
 	}
-	return { state, segments, cursor, tags };
+	return { state, segments, cursor, tags, lastUser, collapsed };
+}
+
+/**
+ * If the reply to the latest user message covers 2+ threads (via [[#n]] markers),
+ * build a column card for it. Undefined if not applicable or already built.
+ */
+function buildCard(ctx: ExtensionContext, r: Replay): ColumnCard | undefined {
+	const branch = ctx.sessionManager.getBranch() as any[];
+	let u = -1;
+	branch.forEach((e, i) => {
+		if (e.type === "message" && e.message?.role === "user" && textOf(e.message.content).trim()) u = i;
+	});
+	if (u < 0) return undefined;
+	const after = branch.slice(u + 1);
+	if (after.some((e) => e.type === "custom" && e.customType === COLUMNS_ENTRY)) return undefined;
+	// only the final reply text (messages without tool calls), not progress notes
+	const blocks = after
+		.filter((e) => e.type === "message" && e.message?.role === "assistant")
+		.filter((e) => !(Array.isArray(e.message.content) && e.message.content.some((b: any) => b?.type === "toolCall")))
+		.flatMap((e) => assistantTexts(e.message.content));
+	if (blocks.length === 0) return undefined;
+	const valid = (id: number) => r.state.threads.some((t) => t.id === id);
+	const byThread = new Map<number, string[]>();
+	const preamble: string[] = [];
+	let cur = 0;
+	for (const block of blocks) {
+		const split = splitByMarkers(block, cur, valid);
+		cur = split.cursor;
+		for (const p of split.parts) {
+			if (!p.thread) preamble.push(p.text);
+			else byThread.set(p.thread, [...(byThread.get(p.thread) ?? []), p.text]);
+		}
+	}
+	if (byThread.size < 2) return undefined;
+	// stable order (by thread id) so a thread keeps its column position across turns
+	const columns: CardColumn[] = [...byThread.keys()]
+		.sort((a, b) => a - b)
+		.map((id) => {
+			const t = r.state.threads.find((x) => x.id === id)!;
+			return {
+				id,
+				title: t.title,
+				status: t.status,
+				waiting: t.status === "open" && !!t.prompt,
+				user: r.lastUser.filter((p) => p.thread === id).map((p) => p.text),
+				text: byThread.get(id)!.join("\n\n"),
+			};
+		});
+	const general = r.lastUser.filter((p) => p.thread === undefined).map((p) => p.text).join("\n\n").trim();
+	return {
+		user: general || undefined,
+		preamble: preamble.join("\n\n").trim() || undefined,
+		columns,
+		blocks: blocks.map((b) => b.trim()),
+	};
+}
+
+const MIN_COL = 36;
+const SEP = " │ ";
+
+/** Render a column card: general text full width, then threads side by side (grid on narrow terminals). */
+function renderCard(card: ColumnCard, width: number, theme: Theme, expanded: boolean): string[] {
+	const out: string[] = [];
+	const w = Math.max(20, width - 1);
+	const pad = (l: string, cw: number) => {
+		const s = truncateToWidth(l, cw);
+		return s + " ".repeat(Math.max(0, cw - visibleWidth(s)));
+	};
+	const you = (text: string, cw: number, max: number) => {
+		const lines = wrapTextWithAnsi(`You: ${text.replace(/\s*\n\s*/g, " ↵ ")}`, cw);
+		const shown = expanded ? lines : lines.slice(0, max);
+		const res = shown.map((l) => theme.fg("muted", l));
+		if (shown.length < lines.length) res[res.length - 1] = theme.fg("muted", `${truncateToWidth(shown[shown.length - 1], cw - 2)} …`);
+		return res;
+	};
+	const md = (text: string, cw: number) => new Markdown(text, 0, 0, getMarkdownTheme()).render(cw);
+
+	if (card.user) out.push(...you(card.user, w, 3));
+	if (card.preamble) out.push(...md(card.preamble, w));
+	if (out.length) out.push("");
+
+	const n = card.columns.length;
+	const perRow = Math.max(1, Math.min(n, Math.floor((w + SEP.length) / (MIN_COL + SEP.length))));
+	const cw = Math.floor((w - SEP.length * (perRow - 1)) / perRow);
+	const sep = theme.fg("borderMuted", SEP);
+	for (let r = 0; r < n; r += perRow) {
+		if (r) out.push("");
+		const cols = card.columns.slice(r, r + perRow).map((c) => {
+			const icon =
+				c.status === "resolved" ? theme.fg("success", "✓ ") : c.status === "parked" ? theme.fg("dim", "⏸ ") : c.waiting ? theme.fg("warning", "? ") : theme.fg("accent", "● ");
+			const lines = [icon + theme.fg("accent", theme.bold(`#${c.id} ${c.title}`)), theme.fg("borderMuted", "─".repeat(cw))];
+			for (const u of c.user) lines.push(...you(u, cw, 4));
+			if (c.user.length) lines.push("");
+			lines.push(...md(c.text, cw));
+			return lines;
+		});
+		const h = Math.max(...cols.map((c) => c.length));
+		for (let i = 0; i < h; i++) out.push(cols.map((c) => pad(c[i] ?? "", cw)).join(sep).replace(/\s+$/, ""));
+	}
+	return out.map((l) => truncateToWidth(` ${l}`, width));
 }
 
 // ---------------------------------------------------------------- extension
@@ -574,19 +709,25 @@ export default function threadsExtension(pi: ExtensionAPI) {
 	// widget mode is a user preference: persisted across sessions/restarts
 	const PREFS_FILE = join(getAgentDir(), "threads.json");
 	let widgetMode: WidgetMode = "full";
+	/** Show multi-thread replies side by side (column cards). */
+	let columnsOn = true;
 	try {
-		const m = JSON.parse(readFileSync(PREFS_FILE, "utf8"))?.widgetMode;
-		if (["full", "compact", "off"].includes(m)) widgetMode = m;
+		const p = JSON.parse(readFileSync(PREFS_FILE, "utf8"));
+		if (["full", "compact", "off"].includes(p?.widgetMode)) widgetMode = p.widgetMode;
+		if (typeof p?.columns === "boolean") columnsOn = p.columns;
 	} catch {
 		/* defaults */
 	}
-	const setWidgetMode = (m: WidgetMode, ctx: ExtensionContext) => {
-		widgetMode = m;
+	const savePrefs = () => {
 		try {
-			writeFileSync(PREFS_FILE, `${JSON.stringify({ widgetMode }, null, 2)}\n`);
+			writeFileSync(PREFS_FILE, `${JSON.stringify({ widgetMode, columns: columnsOn }, null, 2)}\n`);
 		} catch {
 			/* non-fatal */
 		}
+	};
+	const setWidgetMode = (m: WidgetMode, ctx: ExtensionContext) => {
+		widgetMode = m;
+		savePrefs();
 		updateWidget(ctx);
 		if (ctx.hasUI) ctx.ui.notify(`Thread widget: ${m}`, "info");
 	};
@@ -596,6 +737,8 @@ export default function threadsExtension(pi: ExtensionAPI) {
 	let lastInjected = "";
 	/** Markdown text -> thread id for a divider (only where the thread changes). */
 	let tags = new Map<string, number>();
+	/** Assistant blocks replaced by a column card. */
+	let collapsed = new Set<string>();
 	/** Thread the latest assistant text belongs to (markers move it). */
 	let cursor = 0;
 
@@ -608,6 +751,7 @@ export default function threadsExtension(pi: ExtensionAPI) {
 		state = r.state;
 		segments = r.segments;
 		tags = r.tags;
+		collapsed = r.collapsed;
 		cursor = r.cursor;
 		let moved = false;
 		// A `[[#n]]` marker in the latest reply makes n the active thread.
@@ -674,12 +818,16 @@ export default function threadsExtension(pi: ExtensionAPI) {
 			const current = (await tmux(["display-message", "-p", ...pane, "#S"])).trim();
 			const currentBase = current.replace(/-\d+$/, "");
 			if (currentBase === base) return;
-			if (!/^\d+$/.test(current) && !ours.has(currentBase)) return; // user-chosen name
+			// @pi_autoname: session created by tmux-pick/agents switcher, named after its folder until pi knows the goal
+			const auto = (await tmux(["show-options", "-qv", ...pane, "@pi_autoname"]).catch(() => "")).trim() === "1";
+			if (!auto && !/^\d+$/.test(current) && !ours.has(currentBase)) return; // user-chosen name
 			const taken = new Set((await tmux(["list-sessions", "-F", "#S"])).split("\n").map((s) => s.trim()));
 			let name = base;
 			for (let i = 2; taken.has(name); i++) name = `${base}-${i}`;
 			await tmux(["rename-session", "-t", current, name]);
 			lastTmuxBase = base;
+			// from now on `ours` recognises our name; a later manual rename wins again
+			if (auto) await tmux(["set-option", "-u", ...pane, "@pi_autoname"]).catch(() => {});
 		} catch {
 			/* not in tmux / tmux missing: cosmetic */
 		}
@@ -734,6 +882,8 @@ export default function threadsExtension(pi: ExtensionAPI) {
 	}
 
 	function updateWidget(ctx: ExtensionContext) {
+		// for the agents-hub extension (tmux @pi_goal / @pi_questions -> picker, quickshell)
+		pi.events.emit("threads:state", { goal: state.goal, short: state.short, questions: questionsOf(state).length });
 		if (!ctx.hasUI) return;
 		if (widgetMode === "off" || (state.threads.length === 0 && !state.goal)) {
 			ctx.ui.setWidget("threads", undefined);
@@ -760,6 +910,8 @@ export default function threadsExtension(pi: ExtensionAPI) {
 
 	pi.registerMarkdownTransformer((markdown: string, context: MarkdownTransformContext): string => {
 		if (context.messageType === "assistant-thinking" || !markdown.trim()) return markdown;
+		// shown side by side in the column card right below this message
+		if (context.messageType === "assistant" && columnsOn && !context.isStreaming && collapsed.has(markdown.trim())) return "";
 		const tag = tags.get(markdown) ?? tags.get(markdown.trim());
 		let out = markdown;
 		if (context.messageType === "user") {
@@ -804,7 +956,49 @@ export default function threadsExtension(pi: ExtensionAPI) {
 	pi.on("agent_settled", async (_e, ctx) => {
 		const before = JSON.stringify([...tags]);
 		if (rebuild(ctx)) persist(); // markers moved the active thread
-		if (JSON.stringify([...tags]) !== before) await refreshTranscript(ctx);
+		let carded = false;
+		if (columnsOn) {
+			const card = buildCard(ctx, replay(ctx));
+			if (card) {
+				pi.appendEntry<ColumnCard>(COLUMNS_ENTRY, card);
+				for (const b of card.blocks) collapsed.add(b);
+				carded = true;
+			}
+		}
+		if (carded || JSON.stringify([...tags]) !== before) await refreshTranscript(ctx);
+	});
+
+	// ------------------------------------------------------------ column cards
+
+	pi.registerEntryRenderer<ColumnCard>(COLUMNS_ENTRY, (entry, { expanded }, theme) => {
+		const card = entry.data;
+		let key = "";
+		let lines: string[] = [];
+		return {
+			render(width: number) {
+				if (!columnsOn || !card?.columns?.length) return [];
+				const k = `${width}:${expanded}`;
+				if (k !== key) {
+					lines = renderCard(card, width, theme, expanded);
+					key = k;
+				}
+				return lines;
+			},
+			invalidate() {
+				key = "";
+			},
+		};
+	});
+
+	pi.registerCommand("thread-columns", {
+		description: "Show multi-thread replies side by side: on | off (no arg toggles)",
+		handler: async (args, ctx) => {
+			const a = (args ?? "").trim();
+			columnsOn = a === "on" ? true : a === "off" ? false : !columnsOn;
+			savePrefs();
+			await refreshTranscript(ctx);
+			ctx.ui.notify(`Thread columns: ${columnsOn ? "on" : "off"}`, "info");
+		},
 	});
 
 	// Lines starting with "#n " address thread n; one message may address several threads.
@@ -910,7 +1104,7 @@ export default function threadsExtension(pi: ExtensionAPI) {
 			"`thread` tool – QUESTIONS: whenever you need the user to decide or answer something, register each question with `ask` (title 2-5 words, one-sentence prompt, 2-4 short concrete options, `recommended` = your pick). In the visible reply, list them with their thread number, e.g. `**#4 Ban duration** – How long …? (recommended: 1 h)`. The user answers with lines like `4. 1 hour` / `#4 …`, or via an answer picker. Don't `ask` rhetorical or trivial yes/no confirmations.",
 			"`thread` tool – FOLLOW-UPS & CLOSING: when an answer leads to a follow-up question on the same point, `ask{thread:n,…}` again (same number). As soon as a point is settled, `resolve{thread:n, note}` with the decision in ≤12 words (e.g. \"1 h ban, IPv6 included\") – these notes are the session's decision log. Unanswered questions are auto-parked after a few user messages; re-`ask` them only if still relevant.",
 			"`thread` tool – SIDE DISCUSSIONS: `open` a thread only when a distinct topic branches off while other work is unfinished. Never open a thread for the main line of work itself. Resolve it with a short outcome note when done.",
-			"Markers: only when your reply covers 2+ threads (e.g. the user answered #4 and #6), start each part with a marker line `[[#n]]`; text after it is filed under thread n. With a single topic, write no markers.",
+			"Markers: only when your reply covers 2+ threads (e.g. the user answered #4 and #6), start each part with a marker line `[[#n]]`; text after it is filed under thread n. With a single topic, write no markers. Such replies are shown to the user as side-by-side columns (one per thread, with the user's own answer on top), so keep each section compact and self-contained and don't repeat the user's answer.",
 			"Do `thread` ops BEFORE writing the visible reply and batch them into one call (parallel with other tools when possible); write the reply as your final message with no tool call after it. Skip the tool entirely when nothing changed. Never resolve a question without answering/confirming it visibly in the reply.",
 			"A hidden [threads] message shows the current state (goal, open points, decisions). User lines starting with `#n `, `n. `, `n) ` or `n: ` address thread n; answer each addressed thread (in its own [[#n]] section if there are several).",
 		],
