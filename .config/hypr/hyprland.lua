@@ -12,6 +12,8 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK")
     hl.exec_cmd("hash dbus-update-activation-environment 2>/dev/null && dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP")
     hl.exec_cmd(home .. "/.config/hypr/scripts/portal-reset.sh")
+    -- XREAL glasses: auto-switch mode when ultrawide is toggled on the glasses
+    hl.exec_cmd(home .. "/.config/hypr/scripts/xreal-automode.sh")
 end)
 
 hl.env("LIBVA_DRIVER_NAME", "nvidia")
@@ -44,10 +46,26 @@ local chat    = "signal-desktop"
 
 -- monitors.lua is a symlink (not tracked in git) to one of the monitors-*.lua /
 -- monitors_*.lua layouts, switched by ~/.local/bin/switch-monitor-layout.
+--
+-- Per-output scale overrides from monitor-scales.lua (set via
+-- ~/.local/bin/monitor-scale) win over the layout's scale. The file is re-read
+-- on every hl.monitor() call, so live `hyprctl eval` updates see it too.
+do
+    local set_monitor = hl.monitor
+    local scales_file = home .. "/.config/hypr/monitor-scales.lua"
+    hl.monitor = function(spec)
+        local ok, scales = pcall(dofile, scales_file)
+        if ok and type(scales) == "table" and type(spec) == "table"
+            and not spec.disabled and scales[spec.output] then
+            spec.scale = scales[spec.output]
+        end
+        return set_monitor(spec)
+    end
+end
 require("monitors")
 
--- Overrides the layout's eDP-1 rule (as in the old config, where this came after `source`).
-hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x0", scale = 1 })
+-- Disabled: this overrode the layout's eDP-1 position (broke vertical stacking set via nwg-displays).
+-- hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x0", scale = 1 })
 -- hl.monitor({ output = "DP-1", mode = "3840x2160@30", position = "0x0", scale = 1 })
 -- hl.monitor({ output = "eDP-1", mode = "2560x1440@60", position = "610x2160", scale = 1 })
 -- hl.monitor({ output = "HDMI-A-1", disabled = true })
@@ -184,6 +202,10 @@ hl.bind("SUPER + W", exec(home .. "/.local/bin/change-wp next"))
 hl.bind("SUPER + CTRL + d", exec(home .. "/.local/bin/switch-monitor-layout default"))
 hl.bind("SUPER + CTRL + b", exec(home .. "/.local/bin/switch-monitor-layout beamer"))
 hl.bind("SUPER + CTRL + SHIFT + b", exec(home .. "/.local/bin/switch-monitor-layout only-beamer"))
+-- UI/text scale of all apps on HDMI-A-1 (persisted in monitor-scales.lua)
+hl.bind("SUPER + CTRL + ALT + plus",  exec(home .. "/.local/bin/monitor-scale HDMI-A-1 up"))
+hl.bind("SUPER + CTRL + ALT + minus", exec(home .. "/.local/bin/monitor-scale HDMI-A-1 down"))
+hl.bind("SUPER + CTRL + ALT + 0",     exec(home .. "/.local/bin/monitor-scale HDMI-A-1 reset"))
 
 -------------------------------------
 ---- GENERAL WINDOWS OPERATIONS ----
@@ -231,14 +253,25 @@ end
 ---- WORKSPACES ----
 ---------------------------------
 
+-- Switching workspaces away from the agent hub uses the hub's close animation (vertical),
+-- like SUPER+I does. leaveHubAnim is assigned in the AGENT HUB section below.
+local leaveHubAnim
+local function focusWs(target)
+    return function()
+        local ws = hl.get_active_workspace()
+        local d = hl.dsp.focus({ workspace = target })
+        if leaveHubAnim and ws and ws.name == "agents" then leaveHubAnim(d) else hl.dispatch(d) end
+    end
+end
+
 for i = 1, 10 do
     local key = i % 10 -- 10 maps to key 0
-    hl.bind("SUPER + " .. key,          hl.dsp.focus({ workspace = i }))
+    hl.bind("SUPER + " .. key,          focusWs(i))
     hl.bind("SUPER + CTRL + " .. key,   hl.dsp.window.move({ workspace = i, follow = false }))
     hl.bind("SUPER + SHIFT + " .. key,  hl.dsp.window.move({ workspace = i }))
 end
-hl.bind("SUPER + ALT + right",   hl.dsp.focus({ workspace = "m+1" }))
-hl.bind("SUPER + ALT + left",    hl.dsp.focus({ workspace = "m-1" }))
+hl.bind("SUPER + ALT + right",   focusWs("m+1"))
+hl.bind("SUPER + ALT + left",    focusWs("m-1"))
 hl.bind("SUPER + CTRL + right",  hl.dsp.window.move({ workspace = "+1", follow = false }))
 hl.bind("SUPER + CTRL + left",   hl.dsp.window.move({ workspace = "-1", follow = false }))
 hl.bind("SUPER + SHIFT + right", hl.dsp.window.move({ workspace = "m+1" }))
@@ -261,7 +294,9 @@ hl.bind("SUPER + minus",       hl.dsp.workspace.toggle_special())
 -- workspace (hub launched when the workspace is created).
 -- Own animations instead of the normal horizontal slidefade: opening = smooth full-screen
 -- drop from the top, closing = vertical slide+fade back (both ease-out, no bounce).
--- SUPER+SHIFT+I opens the session picker (~/.local/bin/tmux-pick) inside it.
+-- SUPER+SHIFT+I opens the session picker (~/.local/bin/tmux-pick) inside it; quickshell.lua
+-- rebinds it to the quickshell switcher (overlays/AgentSwitcher.qml) + SUPER+CTRL+I.
+-- Leaving the hub with SUPER+<n>/SUPER+ALT+arrows also uses the close animation (focusWs).
 local hub = term .. " --class agents-hub -e " .. home .. "/.local/bin/agents-hub attach"
 hl.workspace_rule({ workspace = "name:agents", on_created_empty = hub })
 hl.window_rule({ match = { class = "agents-hub" }, workspace = "name:agents silent" })
@@ -275,17 +310,25 @@ local function withHubAnim(anim, dispatcher)
     hl.dispatch(dispatcher)
     hl.timer(function() hl.animation(wsAnimDefault) end, { timeout = 600, type = "oneshot" })
 end
+leaveHubAnim = function(dispatcher) withHubAnim(wsAnimClose, dispatcher) end
+-- global for scripts/quickshell: hyprctl dispatch 'AgentsHubLeave(3)' (workspace id or name)
+function AgentsHubLeave(target)
+    focusWs(target)()
+    return hl.dsp.focus({ workspace = target }) -- no-op, already there
+end
 -- global so scripts can use it: hyprctl dispatch 'AgentsHubEnter()'
+-- on_current_monitor: pull the hub to the focused monitor instead of jumping to the
+-- monitor it was created on.
 function AgentsHubEnter()
-    withHubAnim(wsAnimOpen, hl.dsp.focus({ workspace = "name:agents" }))
-    return hl.dsp.focus({ workspace = "name:agents" }) -- no-op, already there
+    withHubAnim(wsAnimOpen, hl.dsp.focus({ workspace = "name:agents", on_current_monitor = true }))
+    return hl.dsp.focus({ workspace = "name:agents", on_current_monitor = true }) -- no-op, already there
 end
 local function toggleHub()
     local ws = hl.get_active_workspace()
     if ws and ws.name == "agents" then
         withHubAnim(wsAnimClose, hl.dsp.focus({ workspace = "previous" }))
     else
-        withHubAnim(wsAnimOpen, hl.dsp.focus({ workspace = "name:agents" }))
+        withHubAnim(wsAnimOpen, hl.dsp.focus({ workspace = "name:agents", on_current_monitor = true }))
     end
 end
 hl.bind("SUPER + I",         toggleHub)

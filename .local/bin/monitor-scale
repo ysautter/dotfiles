@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+#
+# Change the Hyprland output scale (= UI/text size of every app) of one monitor,
+# live and persistent (~/.config/hypr/monitor-scales.lua, read by hyprland.lua).
+#
+#   monitor-scale [OUTPUT] up|down|reset|get|<value>     OUTPUT defaults to HDMI-A-1
+#
+# up/down step through scales that divide 1920x1080 cleanly (no blurry
+# rounding); <value> sets any scale (Hyprland snaps it to the nearest valid one).
+
+set -euo pipefail
+
+steps=(0.75 0.8 1 1.2 1.25 1.333333 1.5 1.6 2)
+file="$HOME/.config/hypr/monitor-scales.lua"
+
+output="HDMI-A-1"
+if [ "$#" -eq 2 ]; then output="$1"; shift; fi
+cmd="${1:-get}"
+
+mon="$(hyprctl monitors -j | jq -c --arg o "$output" '.[] | select(.name == $o)')"
+if [ -z "$mon" ]; then
+    notify-send "Display scale" "$output is not connected/enabled"
+    exit 1
+fi
+cur="$(jq -r .scale <<<"$mon")"
+
+case "$cmd" in
+    get)   echo "$cur"; exit 0 ;;
+    reset) new=1 ;;
+    up|down)
+        new="$cur"
+        if [ "$cmd" = up ]; then
+            for s in "${steps[@]}"; do
+                if awk -v s="$s" -v c="$cur" 'BEGIN{exit !(s > c + 0.01)}'; then new="$s"; break; fi
+            done
+        else
+            for ((i = ${#steps[@]} - 1; i >= 0; i--)); do
+                s="${steps[i]}"
+                if awk -v s="$s" -v c="$cur" 'BEGIN{exit !(s < c - 0.01)}'; then new="$s"; break; fi
+            done
+        fi
+        ;;
+    *)
+        if ! awk -v s="$cmd" 'BEGIN{exit !(s + 0 >= 0.25 && s + 0 <= 4)}'; then
+            echo "Usage: $0 [OUTPUT] up|down|reset|get|<0.25-4>" >&2
+            exit 1
+        fi
+        new="$cmd"
+        ;;
+esac
+
+# Persist: update/add this output's entry in monitor-scales.lua.
+[ -f "$file" ] || printf -- '-- Per-output scale overrides, managed by monitor-scale.\nreturn {\n}\n' >"$file"
+if grep -q "\[\"$output\"\]" "$file"; then
+    sed -i "s|\[\"$output\"\] *= *[0-9.]*|[\"$output\"] = $new|" "$file"
+else
+    sed -i "s|^return {|return {\n    [\"$output\"] = $new,|" "$file"
+fi
+
+# Apply live, keeping mode/position/transform/vrr of the running output.
+spec="$(jq -r --arg s "$new" '
+    "{ output = \"\(.name)\", mode = \"\(.width)x\(.height)@\(.refreshRate * 100 | round / 100)\", " +
+    "position = \"\(.x)x\(.y)\", scale = \($s), transform = \(.transform), vrr = \(if .vrr then 1 else 0 end) }"
+' <<<"$mon")"
+hyprctl eval "hl.monitor($spec)" >/dev/null
+
+applied="$(hyprctl monitors -j | jq -r --arg o "$output" '.[] | select(.name == $o) | .scale')"
+notify-send -h string:x-canonical-private-synchronous:monitor-scale \
+    "Display scale" "$output: $(printf '%.0f' "$(awk -v s="$applied" 'BEGIN{print s * 100}')")%"
+echo "$output: $applied"
