@@ -53,6 +53,13 @@ hl.bind("SUPER + ALT + CTRL + L", hl.dsp.exec_cmd("qs ipc call lock lock || hypr
 hl.unbind("SUPER + S")
 hl.bind("SUPER + S", qs("screenshot region"))
 
+-- ---- agent hub: session switcher (replaces the fzf popup) -----------------------------
+-- SUPER+SHIFT+I switcher (falls back to the tmux-pick popup without quickshell),
+-- SUPER+CTRL+I jump to the agent session that has waited longest for you
+hl.unbind("SUPER + SHIFT + I")
+hl.bind("SUPER + SHIFT + I", hl.dsp.exec_cmd("qs ipc call agents toggle || ~/.local/bin/agents-hub pick"))
+hl.bind("SUPER + CTRL + I",  qs("agents next"))
+
 -- ---- workspace overview with live previews ---------------------------------------
 hl.bind("SUPER + Tab", qs("overview toggle"))
 

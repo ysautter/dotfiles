@@ -1,26 +1,40 @@
 #!/usr/bin/env bash
-# tmux session picker (fzf) with pi status + preview, vi-style keys.
-#   tmux-pick            interactive picker (inside tmux: switch-client, outside: attach)
-#   tmux-pick --count    number of pi sessions waiting for input (for status-right)
-#   tmux-pick --list     list (used by fzf reload)
-#   tmux-pick --new      pick a directory, start pi in a new detached session, switch to it
+# tmux session picker (fzf) for agent (pi) sessions: goal, state, preview.
+# vi-style: starts in NORMAL mode (j/k, 1-9, / to search; stray letters are ignored);
+# actions are on Ctrl only (C-n/C-x/C-r/C-a), so nothing clashes with typing.
+#   tmux-pick                    interactive picker (inside tmux: switch-client, outside: attach)
+#   tmux-pick --count            pi sessions waiting for input (for status-right)
+#   tmux-pick --list [all]       list (used by fzf reload); "all" = also non-agent sessions
+#   tmux-pick --new              pick a directory, start pi in a new detached session, switch to it
+#   tmux-pick --dirs             candidate directories for new sessions (~-abbreviated)
+#   tmux-pick --create DIR [PROMPT]   start pi (optionally with a first prompt) in a new
+#                                detached session, print its name (used by quickshell)
+#   tmux-pick --history          pi session history (like `pi --resume`, all folders) - pick
+#                                one to resume it in a new tmux session (or switch to it if open)
+#   tmux-pick --resume FILE      resume pi session FILE in a new detached tmux session (or
+#                                print the tmux session that has it open), print its name
+# Ctrl+O toggles between the live sessions and the history (data: ~/.local/bin/pi-sessions).
+# Agent session = tagged @agent (pi extension ~/.pi/agent/extensions/agents-hub.ts, set on
+# start) OR a pane currently running pi. State comes from @pi_state (working/waiting/asking);
+# pi without the extension falls back to "output within BUSY_SECS => working".
 # Colours use the terminal's ANSI palette (0-15), so they follow the kitty/wallust theme.
 set -u
 # fzf runs preview/execute via $SHELL; zsh would expand tmux's "=name" targets as commands
 export SHELL=/bin/bash
 
-BUSY_SECS=${TMUX_PICK_BUSY_SECS:-5}   # output within the last N s => pi is working
+BUSY_SECS=${TMUX_PICK_BUSY_SECS:-5}   # fallback: output within the last N s => pi is working
 DEPTH=${TMUX_PICK_DEPTH:-4}           # dir depth below $HOME offered for new sessions
 EXCLUDE=(Mount Games Zomboid go thunderbird Thunderbird node_modules)
+HUB=hub                               # placeholder session of the agents hub (never listed)
 self=$(readlink -f "$0")
 
 # ANSI helpers
 R=$'\e[0m' B=$'\e[1m' D=$'\e[2m'
 c() { printf '\e[38;5;%sm' "$1"; }
-C_WAIT=$(c 6) C_BUSY=$(c 2) C_IDLE=$(c 8) C_PATH=$(c 5) C_KEY=$(c 3) C_NAME=$(c 15) C_HERE=$(c 4)
+C_WAIT=$(c 6) C_ASK=$(c 3) C_BUSY=$(c 2) C_IDLE=$(c 8) C_PATH=$(c 5) C_KEY=$(c 3) C_NAME=$(c 15) C_HERE=$(c 4)
 # icons (Nerd Font), as escapes so editors/tools can't mangle private-use glyphs
 I_HERE=$'\uf054' I_SHOWN=$'\U000f0379' I_ROBOT=$'\U000f06a9' I_FOLDER=$'\U000f024b' I_BRANCH=$'\ue725'
-I_WAIT=$'\u25cf' I_BUSY=$'\u25d0' I_IDLE=$'\u25cb'
+I_WAIT=$'\u25cf' I_BUSY=$'\u25d0' I_IDLE=$'\u25cb' I_ASK=$'\uf128'
 export I_BRANCH
 
 human() { # seconds -> 5s / 3m / 2h / 4d
@@ -31,31 +45,53 @@ human() { # seconds -> 5s / 3m / 2h / 4d
     else                       echo "$((s / 86400))d"; fi
 }
 
-# fields: raw name \t state \t coloured display   (sorted: waiting pi, busy pi, other)
+# fields: raw name \t state \t coloured display
+# sorted: asking/waiting pi (longest waiting first), working pi, exited agents/other
 list() {
-    local now w cur; now=$(date +%s)
+    local all=${1:-} now cur; now=$(date +%s)
     cur=$( [[ -n ${TMUX:-} ]] && tmux display -p '#S' 2>/dev/null )
-    w=$(tmux list-sessions -F '#{session_name}' 2>/dev/null | awk '{ if (length > m) m = length } END { print m + 0 }')
-    tmux list-sessions -F $'#{session_name}\t#{pane_current_command}\t#{window_activity}\t#{pane_current_path}\t#{session_attached}' 2>/dev/null |
-    while IFS=$'\t' read -r name cmd act path att; do
-        local age=$(( now - act )) rank state icon label col here view
-        if [[ $cmd == pi ]]; then
-            if (( age < BUSY_SECS )); then rank=1 state=busy    icon=$I_BUSY label=working col=$C_BUSY
+    # \x1f as separator: tab is IFS whitespace, so empty fields would collapse
+    local f=$'\x1f'
+    tmux list-sessions -F "#{session_name}$f#{pane_current_command}$f#{window_activity}$f#{pane_current_path}$f#{session_attached}$f#{@agent}$f#{@pi_state}$f#{@pi_since}$f#{@pi_questions}$f#{@pi_goal}$f#{pane_title}" 2>/dev/null |
+    while IFS=$f read -r name cmd act path att agent pstate since qs goal ptitle; do
+        [[ $name == "$HUB" ]] && continue
+        [[ -z $all && $agent != 1 && $cmd != pi ]] && continue
+        local age rank state icon label col here view title sortage
+        if [[ $cmd == pi && -n $pstate ]]; then
+            age=$(( now - ${since:-$act} ))
+            case $pstate in
+                asking)  rank=0 state=asking  icon=$I_ASK  label=asking  col=$C_ASK ;;
+                working) rank=1 state=working icon=$I_BUSY label=working col=$C_BUSY ;;
+                *)       rank=0 state=waiting icon=$I_WAIT label=waiting col=$C_WAIT ;;
+            esac
+            (( ${qs:-0} > 0 )) && [[ $state == waiting ]] && state=asking label="? $qs" col=$C_ASK icon=$I_ASK
+        elif [[ $cmd == pi ]]; then   # pi without the agents-hub extension (not reloaded yet)
+            age=$(( now - act ))
+            if (( age < BUSY_SECS )); then rank=1 state=working icon=$I_BUSY label=working col=$C_BUSY
             else                           rank=0 state=waiting icon=$I_WAIT label=waiting col=$C_WAIT; fi
         else
+            age=$(( now - act ))
             rank=2 state=shell icon=$I_IDLE label=$cmd col=$C_IDLE
+            [[ $agent == 1 ]] && label="exited"
         fi
+        # waiting: longest first; others: most recent first
+        if (( rank == 0 )); then sortage=$(( 10**11 - age )); else sortage=$age; fi
         here=' '; [[ $name == "$cur" ]] && here="$C_HERE$B$I_HERE$R"   # this client
         view=' '; (( att > 0 )) && view="$D$I_SHOWN$R"                 # shown somewhere
-        printf '%s\t%s\t%s\t%s %s%s%s %s  %s%-*s%s  %s%-8s%s %s%4s%s  %s%s%s\n' \
-            "$rank$(printf '%012d' "$age")" "$name" "$state" \
-            "$here" "$col" "$icon" "$R" "$view" "$B$C_NAME" "$w" "$name" "$R" \
-            "$col" "$label" "$R" "$D" "$(human "$age")" "$R" "$C_PATH$D" "${path/#$HOME/\~}" "$R"
+        # no @pi_goal (pi started before the extension): pi's terminal title is "π - <goal> - <dir>"
+        if [[ -z $goal && $cmd == pi && $ptitle == "π - "*" - "* ]]; then
+            goal=${ptitle#π - }; goal=${goal% - *}
+        fi
+        title=${goal:-$name}
+        printf '%s\t%s\t%s\t%s %s%s%s %s %s%-8.8s%s %s%4s%s  %s%s%s  %s%s · %s%s\n' \
+            "$rank$(printf '%012d' "$sortage")" "$name" "$state" \
+            "$here" "$col" "$icon" "$R" "$view" "$col" "$label" "$R" "$D" "$(human "$age")" "$R" \
+            "$B$C_NAME" "$title" "$R" "$C_PATH$D" "$name" "${path/#$HOME/\~}" "$R"
     done | sort | cut -f2-
 }
 
 count() {
-    local n; n=$(list | awk -F'\t' '$2 == "waiting"' | wc -l)
+    local n; n=$(list | awk -F'\t' '$2 == "waiting" || $2 == "asking"' | wc -l)
     (( n > 0 )) && printf '⏳%s ' "$n"
 }
 
@@ -78,6 +114,20 @@ dirs() { # zoxide (frecency) first, then all non-hidden dirs below $HOME, dedupe
     } | awk '!seen[$0]++' | sed "s:^$HOME:~:"
 }
 
+create() { # $1 dir, $2 optional first prompt, $3 optional session file to resume -> prints the new session's name
+    local dir=${1/#\~/$HOME} prompt=${2:-} file=${3:-} name base i=2 cmd=pi
+    [[ -n $file ]] && cmd+=" --session $(printf '%q' "$file")"
+    [[ -d $dir ]] || { echo "no such dir: $dir" >&2; return 1; }
+    base=$(basename "$dir" | tr '.: ' '---'); name=$base
+    while tmux has-session -t "=$name" 2>/dev/null; do name="$base-$i"; i=$((i + 1)); done
+    tmux new-session -d -s "$name" -c "$dir" || return 1
+    # @agent: listed even before pi is up; @pi_autoname: pi may rename it to its goal
+    tmux set-option -t "$name:" @agent 1 \; set-option -t "$name:" @pi_autoname 1
+    [[ -n $prompt ]] && cmd+=" $(printf '%q' "$prompt")"
+    tmux send-keys -t "=$name:" "$cmd" Enter   # pane target needs the trailing ':'
+    printf '%s\n' "$name"
+}
+
 # shared look
 STYLE=(--ansi --layout reverse --height 100% --cycle --highlight-line
     --style full:rounded --info inline-right --scrollbar '│'
@@ -85,21 +135,26 @@ STYLE=(--ansi --layout reverse --height 100% --cycle --highlight-line
     --color 'fg:-1,bg:-1,fg+:15,bg+:0,hl:6,hl+:6:bold,gutter:-1'
     --color 'border:8,list-border:8,input-border:8,preview-border:8,footer-border:8'
     --color 'label:4:bold,list-label:8,input-label:4:bold,preview-label:5:bold,footer-label:8'
-    --color 'prompt:3:bold,pointer:6:bold,info:8,spinner:2,header:8,footer:8,ghost:8:italic,query:15:bold')
+    --color 'prompt:3:bold,pointer:6:bold,info:8,spinner:2,header:8,footer:8,ghost:8:italic,query:15:bold'
+    --bind 'ctrl-j:down,ctrl-k:up')
 
-# vi-style modal fzf: NORMAL (prompt "❯ ") j/k g/G C-d/C-u move, l/Enter accept, q/Esc quit,
-# i or / -> SEARCH (prompt "/ ") where letters type, Esc back to NORMAL, Enter accepts.
-# $1 = title, $2 = extra normal-mode letter keys bound by the caller, $3 = "search" to start in SEARCH.
+# vi-style modal fzf. NORMAL (prompt "❯ "): j/k g/G C-d/C-u move, l/Enter accept, 1-9 accept
+# the n-th row, q/Esc quit, / or i -> SEARCH; every other letter is swallowed, so stray
+# keys never filter. SEARCH (prompt "/ "): letters type, Esc back to NORMAL (query kept).
+# Actions stay on Ctrl in both modes. $1 = title, $2 = "search" to start in SEARCH.
 vi_opts() {
-    local t=$1 keys="j,k,g,G,l,q,i,/${2:+,$2}"
+    local t=$1 used=" j k g G l q i 1 2 3 4 5 6 7 8 9 " c ign=() keys
+    for c in {a..z} {A..Z} 0 space; do [[ $used == *" $c "* ]] || ign+=("$c"); done
+    keys="j,k,g,G,l,q,i,/,1,2,3,4,5,6,7,8,9,$(IFS=,; echo "${ign[*]}")"
     local to_search="unbind($keys)+change-prompt(/ )+change-input-label( $t · SEARCH )+change-ghost(type to filter · Esc = normal mode)"
     local to_normal="rebind($keys)+change-prompt(❯ )+change-input-label( $t · NORMAL )+change-ghost(/ or i to search)"
     VI=(--prompt '❯ ' --input-label " $t · NORMAL " --ghost '/ or i to search'
-        --bind 'j:down,k:up,g:first,G:last,l:accept,q:abort'
-        --bind 'ctrl-j:down,ctrl-k:up,ctrl-d:half-page-down,ctrl-u:half-page-up'
+        --bind 'j:down,k:up,g:first,G:last,l:accept,q:abort,ctrl-d:half-page-down,ctrl-u:half-page-up'
+        --bind "$(IFS=,; printf '%s' "${ign[*]/%/:ignore}")"
         --bind "i:$to_search" --bind "/:$to_search"
         --bind "esc:transform:[ \"\$FZF_PROMPT\" = '/ ' ] && echo '$to_normal' || echo abort")
-    [[ ${3:-} == search ]] && VI+=(--bind "start:$to_search")
+    for c in 1 2 3 4 5 6 7 8 9; do VI+=(--bind "$c:pos($c)+accept" --bind "alt-$c:pos($c)+accept"); done
+    [[ ${2:-} == search ]] && VI+=(--bind "start:$to_search")
 }
 
 keyhint() { # "key desc" pairs -> coloured footer line
@@ -109,42 +164,75 @@ keyhint() { # "key desc" pairs -> coloured footer line
 }
 
 new() {
-    local dir name base i=2
-    vi_opts "$I_ROBOT new pi session" '' search
-    dir=$(dirs | fzf "${STYLE[@]}" "${VI[@]}" --print-query --list-label " $I_FOLDER folder " \
+    local dir name
+    vi_opts "$I_ROBOT new pi session" search   # you almost always type a folder here
+    dir=$(dirs | fzf "${STYLE[@]}" "${VI[@]}" --print-query \
+        --list-label " $I_FOLDER folder " \
         --footer "$(keyhint '⏎' 'start pi here' 'Esc' 'normal mode' 'j/k' 'move' 'q' 'cancel')${D}(typed paths work too)${R}" \
         --preview 'd={}; d="${d/#\~/$HOME}"; b=$(git -C "$d" branch --show-current 2>/dev/null) && printf "\e[38;5;2m%s %s\e[0m\n\n" "$I_BRANCH" "$b"; lsd -A --group-dirs first --color always --icon always "$d" 2>/dev/null || ls -A --color=always "$d"' \
         --preview-window 'right,45%' \
         --bind 'focus:transform-preview-label:printf " %s " {}' | tail -1)
     [[ -z $dir ]] && return 1
-    dir=${dir/#\~/$HOME}
-    [[ -d $dir ]] || { echo "no such dir: $dir"; sleep 1; return 1; }
-    base=$(basename "$dir" | tr '.: ' '---'); name=$base
-    while tmux has-session -t "=$name" 2>/dev/null; do name="$base-$i"; i=$((i + 1)); done
-    tmux new-session -d -s "$name" -c "$dir"
-    tmux send-keys -t "=$name:" pi Enter   # pane target needs the trailing ':'
+    name=$(create "$dir") || { sleep 1; return 1; }
+    go "$name"
+}
+
+resume() { # $1 session file -> name of the tmux session showing it (existing or new)
+    local file=$1 open cwd
+    [[ -f $file ]] || { echo "no such session file: $file" >&2; return 1; }
+    open=$(tmux list-sessions -F $'#{session_name}\x1f#{@pi_session_file}\x1f#{@pi_state}' 2>/dev/null |
+        awk -F$'\x1f' -v f="$file" '$2 == f && $3 != "" { print $1; exit }')
+    [[ -n $open ]] && { printf '%s\n' "$open"; return 0; }
+    cwd=$(head -1 "$file" | jq -r '.cwd // empty' 2>/dev/null)
+    [[ -d $cwd ]] || cwd=$HOME
+    create "$cwd" "" "$file"
+}
+
+history() {
+    local sel name
+    vi_opts "$I_ROBOT pi session history"
+    local ps=$HOME/.local/bin/pi-sessions
+    sel=$("$ps" --list | fzf "${STYLE[@]}" "${VI[@]}" --delimiter $'\t' --with-nth 3 \
+        --list-label " ${C_BUSY}● tmux session${R} = open · age · prompts " --list-label-pos -2 \
+        --footer "$(keyhint '⏎/l' 'resume' '1-9' 'jump' '/' 'search' 'C-o' 'live sessions' 'C-n' 'new' 'q' 'quit')" \
+        --preview "$ps --preview {1}" \
+        --preview-window 'right,50%,wrap,follow' \
+        --bind 'focus:transform-preview-label:printf " %s " "$(basename {1} .jsonl | cut -d_ -f1)"' \
+        --bind "ctrl-o:become($self)" --bind "ctrl-n:become($self --new)" | cut -f1)
+    [[ -z $sel ]] && return 1
+    name=$(resume "$sel") || { sleep 1; return 1; }
     go "$name"
 }
 
 case ${1:-} in
-    --list)  list; exit ;;
-    --count) count; exit ;;
-    --new)   new; exit ;;
+    --history) history; exit ;;
+    --resume)  resume "${2:?file}"; exit ;;
+    --list)   list "${2:-}"; exit ;;
+    --count)  count; exit ;;
+    --new)    new; exit ;;
+    --dirs)   dirs; exit ;;
+    --create) create "${2:?dir}" "${3:-}"; exit ;;
 esac
 
-rename='execute(printf "\n  rename \e[1m%s\e[0m to: " {1}; read -r n; [ -n "$n" ] && tmux rename-session -t ={1} "$n")'
-legend=" ${C_WAIT}${I_WAIT}${R} waiting  ${C_BUSY}${I_BUSY}${R} working  ${C_IDLE}${I_IDLE}${R} shell  ${D}${I_SHOWN}${R} shown  ${C_HERE}${I_HERE}${R} here "
-vi_opts "$I_ROBOT pi sessions" 'x,r,n'
+rename='execute(printf "\n  rename \e[1m%s\e[0m to: " {1}; read -r n; [ -n "$n" ] && tmux rename-session -t ={1} "$n" && tmux set-option -u -t "$n:" @pi_autoname)'
+kill='execute(printf "\n  kill session \e[1m%s\e[0m? [y/N] " {1}; read -r -n1 a; [ "$a" = y ] || [ "$a" = Y ] && tmux kill-session -t ={1})'
+# C-a mode (also non-agent sessions) lives in a flag file; the prompt belongs to vi mode
+allflag="${XDG_RUNTIME_DIR:-/tmp}/tmux-pick-all.$$"; rm -f "$allflag"; trap 'rm -f "$allflag"' EXIT
+toggle_all="transform:if [ -e '$allflag' ]; then rm -f '$allflag'; echo 'change-footer-label()+reload($self --list)'; else touch '$allflag'; echo 'change-footer-label( all tmux sessions )+reload($self --list all)'; fi"
+relist="[ -e '$allflag' ] && $self --list all || $self --list"   # keeps the C-a mode
+legend=" ${C_WAIT}${I_WAIT}${R} waiting  ${C_ASK}${I_ASK}${R} question  ${C_BUSY}${I_BUSY}${R} working  ${C_IDLE}${I_IDLE}${R} exited  ${D}${I_SHOWN}${R} shown  ${C_HERE}${I_HERE}${R} here "
+vi_opts "$I_ROBOT agent sessions"
 sel=$(list | fzf "${STYLE[@]}" "${VI[@]}" --delimiter $'\t' --with-nth 3 \
     --list-label "$legend" --list-label-pos -2 \
-    --footer "$(keyhint '⏎/l' 'switch' 'n' 'new pi' 'x' 'kill' 'r' 'rename' '/' 'search' 'q' 'quit')" \
+    --footer "$(keyhint '⏎/l' 'switch' '1-9' 'jump' '/' 'search' 'C-n' 'new' 'C-x' 'kill' 'C-r' 'rename' 'C-o' 'history' 'C-a' 'all' 'q' 'quit')" \
     --preview 'tmux capture-pane -ep -t ={1}: | grep -v "^\s*$" | tail -n $FZF_PREVIEW_LINES' \
-    --preview-window 'right,55%,nowrap' \
+    --preview-window 'right,50%,nowrap' \
     --bind 'focus:transform-preview-label:printf " %s · %s " {1} {2}' \
-    --bind "n:become($self --new)" --bind "ctrl-n:become($self --new)" \
-    --bind "x:execute-silent(tmux kill-session -t ={1})+reload($self --list)" \
-    --bind "ctrl-x:execute-silent(tmux kill-session -t ={1})+reload($self --list)" \
-    --bind "r:$rename+reload($self --list)" --bind "ctrl-r:$rename+reload($self --list)" \
+    --bind "ctrl-n:become($self --new)" \
+    --bind "ctrl-x:$kill+reload($relist)" \
+    --bind "ctrl-r:$rename+reload($relist)" \
+    --bind "ctrl-a:$toggle_all" \
+    --bind "ctrl-o:become($self --history)" \
     | cut -f1)
 
 [[ -n $sel ]] && go "$sel"

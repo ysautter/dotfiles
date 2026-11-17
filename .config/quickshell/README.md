@@ -18,6 +18,8 @@ features: `qs ipc show`.
 | `SUPER+V` / `SUPER+.` | clipboard history / emoji |
 | `SUPER+A` | Ask pi (Ctrl+P model, Ctrl+T thinking, Ctrl+N new, Esc close) |
 | `SUPER+Tab` | workspace overview (click, drag windows, arrows, 1-9) |
+| `SUPER+SHIFT+I` | agent session switcher: pi sessions in tmux with goal, state, live preview; vi-style: j/k move, l/Enter show in the hub, 1-9 jump, `/` search (Esc back), q close; Ctrl+N new (folder + optional first prompt), Ctrl+X kill, Ctrl+R rename, Ctrl+A all sessions, Ctrl+O pi session history (resume one in a new tmux session; data: `~/.local/bin/pi-sessions`) |
+| `SUPER+CTRL+I` | jump to the agent session that has waited longest |
 | `SUPER+S` | screenshot (drag/click window, Enter copy, S save, E satty) |
 | `SUPER+P` | power menu |
 | `SUPER+SHIFT+N` | notification centre · `SUPER+CTRL+SHIFT+N` do-not-disturb |
@@ -57,6 +59,11 @@ features: `qs ipc show`.
   tasks due today/overdue, GitLab MRs waiting for my review (`Theme.attnReviews`), deferred/bounced mail on the
   Stalwart server (`Theme.attnMail`) and disks ≥ 85 % full (`Theme.attnUpdates`,
   `Theme.attnTasks`, `Theme.attnDisk`).
+- **Agents** (attention area): pi sessions in tmux – number waiting for you
+  (yellow = open question), ◐n working; click = switcher, right click = hub.
+  When a session finishes while you aren't looking at it, the island shows it;
+  click the island to open it in the hub. Data: `services/Agents.qml` (tmux
+  options from `~/.pi/agent/extensions/agents-hub.ts`).
 - Optional glance item `"wealth"` (portfolio day change) in `Theme.glance`.
 - No tray and no media display (by choice; see tag `qs-9-calm-bar`).
 - **Primary monitor only**: attention, glance, bell. Other monitors show

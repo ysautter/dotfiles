@@ -63,7 +63,7 @@ PanelWindow {
         return a.startsWith("0x") ? a : "0x" + a;
     }
     function goTo(id) {
-        Hyprland.dispatch(`workspace ${id}`);
+        Agents.focusWorkspace(id);
         hide();
     }
     function focusWin(t) {

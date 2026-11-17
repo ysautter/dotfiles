@@ -314,7 +314,7 @@ Item {
             else if (t === "l" || k === Qt.Key_Right) moveBar(1);
             else if (t === "0" || t === "^") moveBar(-999);
             else if (t === "$") moveBar(999);
-            else if (t >= "1" && t <= "9" && t.length === 1) Hyprland.dispatch(`workspace ${t}`);
+            else if (t >= "1" && t <= "9" && t.length === 1) Agents.focusWorkspace(parseInt(t));
             else if (activate) activateBar(Qt.LeftButton);
             else if (t === "r" || t === "m") activateBar(Qt.RightButton);
             else if (t === "j" || k === Qt.Key_Down) enterPanel();

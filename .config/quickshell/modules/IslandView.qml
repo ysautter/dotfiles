@@ -103,6 +103,6 @@ Item {
         anchors.fill: parent
         enabled: Island.active
         cursorShape: Qt.PointingHandCursor
-        onClicked: Island.dismiss()
+        onClicked: Island.activate()
     }
 }

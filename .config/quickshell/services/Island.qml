@@ -10,7 +10,7 @@ import QtQuick
 Singleton {
     id: root
 
-    property var current: null          // {icon, text, image, tint, duration}
+    property var current: null          // {icon, text, image, tint, duration, action}  (action: run on click)
     property var queue: []
     readonly property bool active: current !== null
 
@@ -33,6 +33,11 @@ Singleton {
     }
 
     function dismiss() { timer.stop(); next(); }
+    function activate() {
+        const a = current?.action;
+        dismiss();
+        if (typeof a === "function") a();
+    }
 
     Timer {
         id: timer
@@ -66,6 +71,17 @@ Singleton {
                 root.show("✻", c === "critical" ? "Claude limit reached · " + ClaudeUsage.text : "Claude usage high · " + ClaudeUsage.text,
                           { tint: c === "critical" ? "critical" : "warning", duration: 5000 });
             root._claudeCls = c;
+        }
+    }
+
+    // an agent session (tmux, see Agents.qml) finished and waits for you; click = show it
+    Connections {
+        target: Agents
+        function onSessionReady(s) {
+            const title = s.title.length > 60 ? s.title.slice(0, 59) + "…" : s.title;
+            root.show("\u{f06a9}", s.state === "asking" ? `${title} · has a question` : `${title} · done`,
+                      { tint: s.state === "asking" ? "warning" : "good", duration: 7000,
+                        action: () => Agents.go(s.name) });
         }
     }
 

@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Hyprland
 import QtQuick
 import qs.config
+import qs.services
 
 // Hyprland workspaces of this monitor.
 //  - the active-workspace highlight slides between buttons
@@ -127,7 +128,7 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: ws.modelData.activate()
+                onClicked: Agents.hubFocused ? Agents.focusWorkspace(ws.modelData.id) : ws.modelData.activate()
             }
         }
     }

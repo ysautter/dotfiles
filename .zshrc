@@ -234,7 +234,8 @@ zinit wait lucid for \
 #    OMZP::docker-compose/_docker-compose
 
 
-zinit wait lucid for \
+# not turbo/deferred: pi started via `tmux send-keys` (agents-hub) must already see SSH_AUTH_SOCK
+zinit lucid for \
     OMZP::ssh-agent
 
 

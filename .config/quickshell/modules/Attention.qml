@@ -12,6 +12,22 @@ Row {
 
     height: Theme.barHeight
 
+    // ---- agent (pi) sessions in tmux: waiting for you / working --------------------------
+    // number = sessions waiting for input (yellow when one has a question), ◐n = working
+    BarModule {
+        id: agents
+        shown: Agents.needsYou > 0 || Agents.working > 0
+        icon: "\u{f06a9}"
+        text: (Agents.needsYou > 0 ? Agents.needsYou : "")
+              + (Agents.working > 0 ? (Agents.needsYou > 0 ? " " : "") + "◐" + Agents.working : "")
+        textColor: Agents.asking > 0 ? Colors.warning : Agents.needsYou > 0 ? Colors.fg : Qt.alpha(Colors.fg, 0.55)
+        clickable: true
+        tooltip: Agents.sessions.filter(s => s.state !== "exited").slice(0, 12)
+                     .map(s => `${s.state === "working" ? "◐" : s.state === "asking" ? "?" : "●"}  ${s.title}`)
+                     .join("\n") + "\n\nclick: switcher · right click: hub"
+        onClicked: button => button === Qt.RightButton ? Agents.enterHub() : Agents.switcherOpen = true
+    }
+
     // ---- updates ------------------------------------------------------------------
     BarModule {
         id: updates

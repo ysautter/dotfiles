@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""pi session history (what `pi --resume` shows), for tmux-pick and the quickshell switcher.
+
+  pi-sessions --json          all sessions, newest first, as one JSON array:
+                              [{file, id, cwd, name, first, modified, messages, open}]
+                              open = tmux session that has it open (@pi_session_file, set by
+                              ~/.pi/agent/extensions/agents-hub.ts), "" if none
+  pi-sessions --list          the same for fzf: file \t open \t coloured display line
+  pi-sessions --preview FILE  the last messages of a session as plain text
+
+Parsed metadata is cached in ~/.cache/agents-hub/sessions.json (keyed by mtime + size),
+so only new/changed session files are read. Sessions without a user message are skipped.
+"""
+
+import json
+import os
+import subprocess
+import sys
+import time
+
+HOME = os.path.expanduser("~")
+SESSION_DIR = os.environ.get("PI_CODING_AGENT_SESSION_DIR") or os.path.join(HOME, ".pi/agent/sessions")
+CACHE = os.path.join(HOME, ".cache/agents-hub/sessions.json")
+CACHE_VERSION = 1
+
+
+def text_of(content):
+    """message content (string or parts) -> plain text"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text")
+    return ""
+
+
+def one_line(s, n):
+    s = " ".join(s.split())
+    return s if len(s) <= n else s[: n - 1] + "…"
+
+
+def parse(path):
+    meta = {"id": "", "cwd": "", "name": "", "first": "", "messages": 0, "last": ""}
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for i, line in enumerate(f):
+            if i == 0:
+                try:
+                    h = json.loads(line)
+                    meta["id"], meta["cwd"] = h.get("id", ""), h.get("cwd", "")
+                except ValueError:
+                    return None
+                continue
+            # cheap string tests before json.loads: files are large (tool output, images)
+            if '"type":"session_info"' in line[:80]:
+                try:
+                    meta["name"] = json.loads(line).get("name") or ""
+                except ValueError:
+                    pass
+            elif '"role":"user"' in line[:200]:
+                meta["messages"] += 1
+                if not meta["first"]:
+                    try:
+                        meta["first"] = one_line(text_of(json.loads(line)["message"].get("content")), 200)
+                    except (ValueError, KeyError, AttributeError):
+                        pass
+    return meta
+
+
+def load_cache():
+    try:
+        with open(CACHE) as f:
+            c = json.load(f)
+        return c["files"] if c.get("version") == CACHE_VERSION else {}
+    except (OSError, ValueError, KeyError):
+        return {}
+
+
+def save_cache(files):
+    os.makedirs(os.path.dirname(CACHE), exist_ok=True)
+    tmp = CACHE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump({"version": CACHE_VERSION, "files": files}, f)
+    os.replace(tmp, CACHE)
+
+
+def open_in_tmux():
+    """session file -> tmux session name (agents-hub extension publishes @pi_session_file)"""
+    try:
+        out = subprocess.run(["tmux", "list-sessions", "-F", "#{session_name}\x1f#{@pi_session_file}\x1f#{@pi_state}"],
+                             capture_output=True, text=True, timeout=3).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    m = {}
+    for line in out.splitlines():
+        parts = line.split("\x1f")
+        if len(parts) == 3 and parts[1] and parts[2]:   # @pi_state set = pi still running
+            m[parts[1]] = parts[0]
+    return m
+
+
+def sessions():
+    cache, new, changed = load_cache(), {}, False
+    for d in os.scandir(SESSION_DIR):
+        if not d.is_dir():
+            continue
+        for e in os.scandir(d.path):
+            if not e.name.endswith(".jsonl"):
+                continue
+            st = e.stat()
+            key = f"{st.st_mtime_ns}:{st.st_size}"
+            c = cache.get(e.path)
+            if not c or c.get("key") != key:
+                meta = parse(e.path)
+                if meta is None:
+                    continue
+                c = dict(meta, key=key, modified=int(st.st_mtime))
+                changed = True
+            new[e.path] = c
+    if changed or len(new) != len(cache):
+        save_cache(new)
+    opened = open_in_tmux()
+    out = [
+        {"file": p, "id": c["id"], "cwd": c["cwd"], "name": c["name"], "first": c["first"],
+         "modified": c["modified"], "messages": c["messages"], "open": opened.get(p, "")}
+        for p, c in new.items() if c["messages"] > 0
+    ]
+    out.sort(key=lambda s: -s["modified"])
+    return out
+
+
+def age(secs):
+    secs = max(0, int(secs))
+    for n, u in ((86400, "d"), (3600, "h"), (60, "m")):
+        if secs >= n:
+            return f"{secs // n}{u}"
+    return f"{secs}s"
+
+
+def fzf_list():
+    R, B, D = "\x1b[0m", "\x1b[1m", "\x1b[2m"
+    c = lambda n: f"\x1b[38;5;{n}m"
+    now = time.time()
+    for s in sessions():
+        title = s["name"] or s["first"] or "(no title)"
+        state = f"{c(2)}● {s['open'][:12]:<12}{R}" if s["open"] else f"{'':<14}"
+        cwd = s["cwd"].replace(HOME, "~", 1)
+        line = (f"{state} {D}{age(now - s['modified']):>4}{R} {D}{s['messages']:>3}{R}  "
+                f"{B}{c(15)}{one_line(title, 110)}{R}  {c(5)}{D}{cwd}{R}")
+        print(f"{s['file']}\t{s['open']}\t{line}")
+
+
+def preview(path, limit=14):
+    msgs = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if '"type":"message"' not in line[:40]:
+                continue
+            try:
+                m = json.loads(line)["message"]
+            except (ValueError, KeyError):
+                continue
+            if m.get("role") in ("user", "assistant"):
+                t = text_of(m.get("content")).strip()
+                if t:
+                    msgs.append((m["role"], t))
+    head = []
+    try:
+        with open(path) as f:
+            h = json.loads(f.readline())
+        head.append(f"{h.get('cwd', '').replace(HOME, '~', 1)}   ·   {len([m for m in msgs if m[0] == 'user'])} prompts")
+    except (OSError, ValueError):
+        pass
+    out = head + [""]
+    for role, t in msgs[-limit:]:
+        t = t if len(t) <= 900 else t[:900] + " …"
+        out.append(("❯ " if role == "user" else "π ") + t.replace("\n", "\n  "))
+        out.append("")
+    print("\n".join(out))
+
+
+def main():
+    # quickshell starts us without a UTF-8 locale: ❯/·/… would raise UnicodeEncodeError
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    arg = sys.argv[1] if len(sys.argv) > 1 else "--json"
+    if arg == "--json":
+        json.dump(sessions(), sys.stdout)
+    elif arg == "--list":
+        fzf_list()
+    elif arg == "--preview" and len(sys.argv) > 2:
+        preview(sys.argv[2])
+    else:
+        print(__doc__, file=sys.stderr)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except BrokenPipeError:
+        pass
