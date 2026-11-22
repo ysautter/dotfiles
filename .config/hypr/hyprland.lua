@@ -4,6 +4,11 @@
 
 local home = os.getenv("HOME")
 
+-- The Lua state survives `hyprctl reload`, so require() would return the cached
+-- module and ignore edits / layout switches (monitors.lua symlink) until a
+-- Hyprland restart. Drop our own modules from the cache on every (re)load.
+for _, m in ipairs({ "monitors", "quickshell" }) do package.loaded[m] = nil end
+
 -------------------
 ---- AUTOSTART (environment) ----
 -------------------

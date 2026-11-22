@@ -3,7 +3,7 @@
 hl.monitor({
 	output = "eDP-1",
 	mode = "1920x1080@120.0",
-	position = "1920x1080",
+	position = "0x0", -- external screens go auto-center-up above (hyprland.lua); must stay 0x0 so they touch
 	scale = 1.0,
 	vrr = 0,
 })
