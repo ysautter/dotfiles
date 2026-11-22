@@ -7,7 +7,9 @@ import qs.services
 
 // Displays menu (SUPER+CTRL+M), per host:
 //  - tower (YST: two desk monitors + projector that is not always on):
-//    layout switcher (wraps ~/.local/bin/switch-monitor-layout), presentation mode
+//    layout switcher (wraps ~/.local/bin/switch-monitor-layout), projector power
+//    (~/.local/bin/projector, only while projector-watch.service publishes
+//    $XDG_RUNTIME_DIR/projector.state), presentation mode
 //  - laptop (yss3l: eDP-1 + XREAL glasses, always placed above eDP-1 by
 //    hyprland.lua): reset layout, glasses UI scale (~/.local/bin/monitor-scale),
 //    presentation mode
@@ -25,10 +27,25 @@ Overlay {
     property string glassesOutput: ""
     property real glassesScale: 1
 
+    // projector power state from projector-watch.service (tower): on | off | unknown | ""
+    readonly property string projector: projState.text().trim()
+    readonly property bool hasProjector: tower && projector !== ""
+    FileView {
+        id: projState
+        path: root.tower ? (Quickshell.env("XDG_RUNTIME_DIR") || "/run/user/1000") + "/projector.state" : ""
+        watchChanges: true
+        onFileChanged: reload()
+    }
+    function setProjector(on) {
+        Quickshell.execDetached([home + "/.local/bin/projector", on ? "on" : "off"]);
+        Osd.show("\uf03d", on ? "Projector turning on…" : "Projector turning off…", -1, false);
+    }
+
     readonly property var entries: tower ? [
         { kind: "layout", id: "default",     label: "Desk monitors",   glyph: "\uf108", file: "" },
         { kind: "layout", id: "beamer",      label: "Desk + beamer",   glyph: "\uf26c", file: "monitors_with_beamer.lua" },
         { kind: "layout", id: "only-beamer", label: "Beamer only",     glyph: "\uf03d", file: "monitors_only_beamer.lua" },
+        ...(hasProjector ? [{ kind: "projector" }] : []),
         { kind: "presentation" },
         { kind: "arrange" }
     ] : [
@@ -94,6 +111,8 @@ Overlay {
             open = false;
         } else if (e.kind === "scale") {
             stepScale("up");
+        } else if (e.kind === "projector") {
+            setProjector(projector !== "on");
         } else if (e.kind === "presentation") {
             Presentation.active = !Presentation.active;
         } else {
@@ -154,7 +173,7 @@ Overlay {
                         x: Theme.s(14)
                         anchors.verticalCenter: parent.verticalCenter
                         width: Theme.s(24)
-                        text: ({ layout: row.entry.glyph ?? "", scale: "\uf002", presentation: "\uf06e", arrange: "\uf013" })[row.entry.kind]
+                        text: ({ layout: row.entry.glyph ?? "", scale: "\uf002", projector: "\uf011", presentation: "\uf06e", arrange: "\uf013" })[row.entry.kind]
                         color: Colors.fg
                         font.family: Theme.iconFont
                         font.pixelSize: Theme.s(15)
@@ -164,6 +183,7 @@ Overlay {
                         anchors.verticalCenter: parent.verticalCenter
                         text: row.entry.kind === "layout" ? row.entry.label
                             : row.entry.kind === "scale" ? (root.glassesOutput ? "Glasses scale (" + root.glassesOutput + ")" : "Glasses not connected")
+                            : row.entry.kind === "projector" ? "Projector power" + (root.projector === "unknown" ? " (no answer)" : "")
                             : row.entry.kind === "presentation" ? "Presentation mode" : "Arrange displays… (wdisplays)"
                         color: Colors.fg
                         font.family: Theme.font
@@ -186,6 +206,14 @@ Overlay {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: Presentation.active
                         onToggled: c => Presentation.active = c
+                    }
+                    Toggle {
+                        visible: row.entry.kind === "projector"
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.s(12)
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: root.projector === "on"
+                        onToggled: c => root.setProjector(c)
                     }
                     // glasses scale: − 120 % +   (←/→ or −/+, 0 = reset)
                     Row {
@@ -233,5 +261,6 @@ Overlay {
     IpcHandler {
         target: "monitors"
         function toggle(): void { root.open = !root.open; }
+        function projector(on: bool): void { root.setProjector(on); }
     }
 }
