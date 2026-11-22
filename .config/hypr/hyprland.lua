@@ -251,6 +251,24 @@ hl.bind("SUPER + CTRL + ALT + plus",  exec(home .. "/.local/bin/monitor-scale XR
 hl.bind("SUPER + CTRL + ALT + minus", exec(home .. "/.local/bin/monitor-scale XREAL down"))
 hl.bind("SUPER + CTRL + ALT + 0",     exec(home .. "/.local/bin/monitor-scale XREAL reset"))
 
+-- Full-res games: XWayland renders at the LOGICAL size and gets upscaled
+-- (blurry) on scaled monitors. If one of these opens as an XWayland window,
+-- its monitor is put to 100% while it runs (~/.local/bin/scale-hold).
+-- Preferred fix is native Wayland, e.g. Silksong: Steam launch option -force-wayland.
+local fullres_games = {
+    ["Hollow Knight Silksong"] = true,
+}
+hl.on("window.open", function(w)
+    if w and w.xwayland and fullres_games[w.class] and w.monitor then
+        hl.exec_cmd(home .. "/.local/bin/scale-hold hold " .. w.monitor.name)
+    end
+end)
+hl.on("window.close", function(w)
+    if w and fullres_games[w.class] then
+        hl.exec_cmd(home .. "/.local/bin/scale-hold release-all")
+    end
+end)
+
 -------------------------------------
 ---- GENERAL WINDOWS OPERATIONS ----
 -------------------------------------

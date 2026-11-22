@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+#
+# Temporarily force a monitor to scale 1 and restore it afterwards.
+# Used by hyprland.lua for XWayland games (they render at the logical size and
+# get upscaled = blurry on scaled monitors).
+#
+#   scale-hold hold OUTPUT      remember OUTPUT's scale, set it to 1
+#   scale-hold release OUTPUT   restore the remembered scale
+#   scale-hold release-all      restore all held monitors
+#
+# State: $XDG_RUNTIME_DIR/scale-hold/<OUTPUT> (gone after reboot, so a crash
+# can't leave the monitor stuck – monitor-scales.lua is restored on release).
+
+set -euo pipefail
+
+cmd="${1:-}"; out="${2:-}"
+dir="${XDG_RUNTIME_DIR:-/tmp}/scale-hold"
+mkdir -p "$dir"
+if [ "$cmd" = release-all ]; then
+    for f in "$dir"/*; do [ -f "$f" ] && "$0" release "$(basename "$f")"; done
+    exit 0
+fi
+[ -n "$cmd" ] && [ -n "$out" ] || { echo "Usage: $0 hold|release OUTPUT | release-all" >&2; exit 1; }
+state="$dir/$out"
+
+case "$cmd" in
+    hold)
+        [ -f "$state" ] && exit 0      # already held (second window)
+        cur="$(hyprctl monitors -j | jq -r --arg o "$out" '.[] | select(.name == $o) | .scale')"
+        [ -n "$cur" ] || exit 0
+        awk -v s="$cur" 'BEGIN{exit !(s > 0.99 && s < 1.01)}' && exit 0   # already 1
+        echo "$cur" >"$state"
+        "$HOME/.local/bin/monitor-scale" "$out" 1 >/dev/null
+        notify-send -h string:x-canonical-private-synchronous:monitor-scale \
+            "Display scale" "$out: 100% while the game runs (was $(awk -v s="$cur" 'BEGIN{printf "%.0f", s*100}')%)"
+        ;;
+    release)
+        [ -f "$state" ] || exit 0
+        prev="$(cat "$state")"
+        rm -f "$state"
+        "$HOME/.local/bin/monitor-scale" "$out" "$prev" >/dev/null
+        ;;
+    *) echo "Usage: $0 hold|release OUTPUT" >&2; exit 1 ;;
+esac
