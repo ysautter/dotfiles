@@ -47,22 +47,62 @@ local chat    = "signal-desktop"
 -- monitors.lua is a symlink (not tracked in git) to one of the monitors-*.lua /
 -- monitors_*.lua layouts, switched by ~/.local/bin/switch-monitor-layout.
 --
--- Per-output scale overrides from monitor-scales.lua (set via
--- ~/.local/bin/monitor-scale) win over the layout's scale. The file is re-read
--- on every hl.monitor() call, so live `hyprctl eval` updates see it too.
+-- Per-monitor scale overrides from monitor-scales.lua (set via
+-- ~/.local/bin/monitor-scale) win over the layout's scale. Keys are
+-- "desc:<description>" (survives connector renames like HDMI-A-1 -> HDMI-A-4)
+-- or connector names. The file is re-read on every hl.monitor() call, so live
+-- `hyprctl eval` updates see it too. "desc:" monitors that no layout rule
+-- covers get a fallback rule after the layout (mode/position of the catch-all
+-- `output = ""` rule if there is one, else preferred/auto).
+--
+-- Per-host hotplug rule: on the laptop (yss3l) every extra screen (XREAL,
+-- beamer, any connector name) goes centred ABOVE eDP-1, whatever layout is active.
+local host = (function()
+    local f = io.open("/etc/hostname")
+    local h = f and f:read("l") or ""
+    if f then f:close() end
+    return (h:match("^[^.]*") or ""):lower()
+end)()
+local scaled_desc_covered = {}
+local catch_all = nil
 do
     local set_monitor = hl.monitor
     local scales_file = home .. "/.config/hypr/monitor-scales.lua"
-    hl.monitor = function(spec)
+    local function load_scales()
         local ok, scales = pcall(dofile, scales_file)
-        if ok and type(scales) == "table" and type(spec) == "table"
-            and not spec.disabled and scales[spec.output] then
-            spec.scale = scales[spec.output]
+        return (ok and type(scales) == "table") and scales or {}
+    end
+    hl.monitor = function(spec)
+        if type(spec) == "table" and type(spec.output) == "string" then
+            local scales = load_scales()
+            local desc = spec.output:match("^desc:(.*)$")
+            if not desc and hl.get_monitor then
+                local ok, m = pcall(hl.get_monitor, spec.output)
+                desc = ok and m and m.description or nil
+            end
+            if desc then scaled_desc_covered[desc] = true end
+            if spec.output == "" then catch_all = spec end
+            local s = (desc and scales["desc:" .. desc]) or scales[spec.output]
+            if s and not spec.disabled then spec.scale = s end
         end
         return set_monitor(spec)
     end
+    require("monitors")
+    if host == "yss3l" then
+        hl.monitor({ output = "", mode = "preferred", position = "auto-center-up", scale = 1 })
+    end
+    for key, s in pairs(load_scales()) do
+        local desc = type(key) == "string" and key:match("^desc:(.*)$")
+        if desc and not scaled_desc_covered[desc] then
+            set_monitor({
+                output = key,
+                mode = catch_all and catch_all.mode or "preferred",
+                position = catch_all and catch_all.position or "auto",
+                scale = s,
+            })
+        end
+    end
 end
-require("monitors")
 
 -- Disabled: this overrode the layout's eDP-1 position (broke vertical stacking set via nwg-displays).
 -- hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x0", scale = 1 })
@@ -200,12 +240,16 @@ hl.bind("SUPER + P", exec(home .. "/.config/rofi/applets/bin/powermenu.sh"))    
 hl.bind("SUPER + W", exec(home .. "/.local/bin/change-wp next"))
 
 hl.bind("SUPER + CTRL + d", exec(home .. "/.local/bin/switch-monitor-layout default"))
-hl.bind("SUPER + CTRL + b", exec(home .. "/.local/bin/switch-monitor-layout beamer"))
-hl.bind("SUPER + CTRL + SHIFT + b", exec(home .. "/.local/bin/switch-monitor-layout only-beamer"))
--- UI/text scale of all apps on HDMI-A-1 (persisted in monitor-scales.lua)
-hl.bind("SUPER + CTRL + ALT + plus",  exec(home .. "/.local/bin/monitor-scale HDMI-A-1 up"))
-hl.bind("SUPER + CTRL + ALT + minus", exec(home .. "/.local/bin/monitor-scale HDMI-A-1 down"))
-hl.bind("SUPER + CTRL + ALT + 0",     exec(home .. "/.local/bin/monitor-scale HDMI-A-1 reset"))
+-- beamer layouts only exist on the tower (YST: two desk monitors + projector)
+if host == "yst" then
+    hl.bind("SUPER + CTRL + b", exec(home .. "/.local/bin/switch-monitor-layout beamer"))
+    hl.bind("SUPER + CTRL + SHIFT + b", exec(home .. "/.local/bin/switch-monitor-layout only-beamer"))
+end
+-- UI/text scale of all apps on the XREAL glasses, whatever connector they are on
+-- (persisted per monitor description in monitor-scales.lua)
+hl.bind("SUPER + CTRL + ALT + plus",  exec(home .. "/.local/bin/monitor-scale XREAL up"))
+hl.bind("SUPER + CTRL + ALT + minus", exec(home .. "/.local/bin/monitor-scale XREAL down"))
+hl.bind("SUPER + CTRL + ALT + 0",     exec(home .. "/.local/bin/monitor-scale XREAL reset"))
 
 -------------------------------------
 ---- GENERAL WINDOWS OPERATIONS ----

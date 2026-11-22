@@ -16,8 +16,12 @@ Singleton {
     readonly property string primary: {
         const screens = Quickshell.screens;
         const names = screens.map(s => s.name);
-        for (const o of Theme.primaryOutputs[root.host] ?? [])
-            if (names.includes(o)) return o;
+        // entries are connector names; a trailing * matches a prefix
+        // ("HDMI-A-*": the connector number changes when re-plugging)
+        for (const o of Theme.primaryOutputs[root.host] ?? []) {
+            const hit = o.endsWith("*") ? names.find(n => n.startsWith(o.slice(0, -1))) : names.find(n => n === o);
+            if (hit) return hit;
+        }
         // widest landscape monitor, leftmost on a tie; portrait ones last
         let best = null;
         for (const s of screens) {

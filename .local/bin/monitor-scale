@@ -3,7 +3,12 @@
 # Change the Hyprland output scale (= UI/text size of every app) of one monitor,
 # live and persistent (~/.config/hypr/monitor-scales.lua, read by hyprland.lua).
 #
-#   monitor-scale [OUTPUT] up|down|reset|get|<value>     OUTPUT defaults to HDMI-A-1
+#   monitor-scale [MONITOR] up|down|reset|get|<value>
+#
+# MONITOR: connector name (HDMI-A-4) or part of the description ("XREAL");
+# defaults to the XREAL glasses. The scale is stored per monitor description
+# ("desc:Nreal XREAL 1 Pro+"), so it survives the connector name changing
+# (HDMI-A-1 -> HDMI-A-4 after replugging).
 #
 # up/down step through scales that divide 1920x1080 cleanly (no blurry
 # rounding); <value> sets any scale (Hyprland snaps it to the nearest valid one).
@@ -13,19 +18,24 @@ set -euo pipefail
 steps=(0.75 0.8 1 1.2 1.25 1.333333 1.5 1.6 2)
 file="$HOME/.config/hypr/monitor-scales.lua"
 
-output="HDMI-A-1"
-if [ "$#" -eq 2 ]; then output="$1"; shift; fi
+target="XREAL"
+if [ "$#" -eq 2 ]; then target="$1"; shift; fi
 cmd="${1:-get}"
 
-mon="$(hyprctl monitors -j | jq -c --arg o "$output" '.[] | select(.name == $o)')"
+mon="$(hyprctl monitors -j | jq -c --arg t "$target" '
+    [.[] | select(.name == $t or (.description | ascii_downcase | contains($t | ascii_downcase)))][0] // empty')"
 if [ -z "$mon" ]; then
-    notify-send "Display scale" "$output is not connected/enabled"
+    names="$(hyprctl monitors -j | jq -r '[.[] | "\(.name) (\(.description))"] | join(", ")')"
+    notify-send "Display scale" "No monitor matching '$target'. Active: $names"
+    echo "No monitor matching '$target'. Active: $names" >&2
     exit 1
 fi
+name="$(jq -r .name <<<"$mon")"
+key="desc:$(jq -r .description <<<"$mon")"
 cur="$(jq -r .scale <<<"$mon")"
 
 case "$cmd" in
-    get)   echo "$cur"; exit 0 ;;
+    get)   echo "$name ($key): $cur"; exit 0 ;;
     reset) new=1 ;;
     up|down)
         new="$cur"
@@ -42,29 +52,34 @@ case "$cmd" in
         ;;
     *)
         if ! awk -v s="$cmd" 'BEGIN{exit !(s + 0 >= 0.25 && s + 0 <= 4)}'; then
-            echo "Usage: $0 [OUTPUT] up|down|reset|get|<0.25-4>" >&2
+            echo "Usage: $0 [MONITOR] up|down|reset|get|<0.25-4>" >&2
             exit 1
         fi
         new="$cmd"
         ;;
 esac
 
-# Persist: update/add this output's entry in monitor-scales.lua.
-[ -f "$file" ] || printf -- '-- Per-output scale overrides, managed by monitor-scale.\nreturn {\n}\n' >"$file"
-if grep -q "\[\"$output\"\]" "$file"; then
-    sed -i "s|\[\"$output\"\] *= *[0-9.]*|[\"$output\"] = $new|" "$file"
-else
-    sed -i "s|^return {|return {\n    [\"$output\"] = $new,|" "$file"
-fi
+# Persist: rewrite monitor-scales.lua with this monitor's entry updated/added
+# (other entries kept; literal string matching, descriptions may contain + . etc.).
+entries="$( [ -f "$file" ] && grep -oE '^ *\["[^"]+"\] *= *[0-9.]+' "$file" | sed -E 's/^ *\["([^"]+)"\] *= *([0-9.]+)/\1\t\2/' || true)"
+entries="$(printf '%s\n' "$entries" | awk -F'\t' -v k="$key" -v v="$new" '
+    NF == 2 && $1 != k { print } END { print k "\t" v }')"
+{
+    echo '-- Per-monitor scale overrides (UI/text size of ALL apps on that monitor).'
+    echo '-- Keys: "desc:<monitor description>" (preferred, survives connector renames)'
+    echo '-- or a connector name ("HDMI-A-1"). Applied on top of the active monitors.lua'
+    echo '-- layout by hyprland.lua; monitors without a layout rule get one automatically.'
+    echo '-- Managed by ~/.local/bin/monitor-scale (live, no reload) – or edit by hand.'
+    echo 'return {'
+    printf '%s\n' "$entries" | awk -F'\t' 'NF == 2 { printf "    [\"%s\"] = %s,\n", $1, $2 }'
+    echo '}'
+} >"$file.tmp" && mv "$file.tmp" "$file"
 
-# Apply live, keeping mode/position/transform/vrr of the running output.
-spec="$(jq -r --arg s "$new" '
-    "{ output = \"\(.name)\", mode = \"\(.width)x\(.height)@\(.refreshRate * 100 | round / 100)\", " +
-    "position = \"\(.x)x\(.y)\", scale = \($s), transform = \(.transform), vrr = \(if .vrr then 1 else 0 end) }"
-' <<<"$mon")"
-hyprctl eval "hl.monitor($spec)" >/dev/null
+# Apply: re-run the monitor rules (hyprland.lua reads monitor-scales.lua), so
+# relative positions like "auto-center-up" are recomputed for the new size.
+hyprctl reload >/dev/null
 
-applied="$(hyprctl monitors -j | jq -r --arg o "$output" '.[] | select(.name == $o) | .scale')"
-notify-send -h string:x-canonical-private-synchronous:monitor-scale \
-    "Display scale" "$output: $(printf '%.0f' "$(awk -v s="$applied" 'BEGIN{print s * 100}')")%"
-echo "$output: $applied"
+applied="$(hyprctl monitors -j | jq -r --arg o "$name" '.[] | select(.name == $o) | .scale')"
+pct="$(awk -v s="$applied" 'BEGIN{printf "%.0f", s * 100}')"
+notify-send -h string:x-canonical-private-synchronous:monitor-scale "Display scale" "$name: $pct%"
+echo "$name: $applied"

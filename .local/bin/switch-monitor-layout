@@ -17,6 +17,15 @@ monitor_conf="${config_folder}/monitors.lua"
 host="$(uname -n)"
 host="${host%%.*}"
 
+# The beamer layouts describe the tower (YST: DP-1/DP-2 + projector on HDMI-A-1).
+# On the laptop they would leave eDP-1 without a rule, so only "default" there.
+if [ "$1" != default ] && [ "${host,,}" != yst ]; then
+  msg="Layout '$1' is only for the tower (YST); using default on ${host}."
+  echo "$msg"
+  notify-send "Monitor" "$msg"
+  set -- default
+fi
+
 case $1 in
   default)
     target="monitors-${host}.lua"

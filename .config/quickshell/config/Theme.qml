@@ -57,7 +57,7 @@ Singleton {
     // name, lower case), otherwise the widest landscape monitor.
     readonly property var primaryOutputs: ({
         "yst": ["HDMI-A-1", "DP-1"],
-        "yss3l": ["HDMI-A-1"],
+        "yss3l": ["HDMI-A-*"],   // XREAL glasses, connector number varies
     })
 
     // attention area: an item only appears when it needs you
