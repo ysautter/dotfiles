@@ -28,14 +28,18 @@ Item {
         .filter(w => w.id > 0 && w.monitor === root.monitor)
         .sort((a, b) => a.id - b.id)
 
+    // the agents hub (named workspace "agents", see services/Agents.qml) is shown on this monitor
+    readonly property bool hubHere: root.monitor?.activeWorkspace?.name === "agents"
+    property Item wsTarget: null
+
     implicitHeight: Theme.barHeight
-    implicitWidth: list.contentWidth
+    implicitWidth: list.contentWidth + hubBtn.width
     Behavior on implicitWidth { NumberAnimation { duration: Theme.animMed; easing.type: Easing.OutCubic } }
 
     // sliding highlight behind the active workspace
     Rectangle {
         id: highlight
-        property Item target: null
+        readonly property Item target: root.hubHere ? hubBtn : root.wsTarget
         visible: target !== null
         x: target ? target.x : 0
         width: target ? target.width : 0
@@ -54,7 +58,8 @@ Item {
 
     ListView {
         id: list
-        anchors.fill: parent
+        width: contentWidth
+        height: parent.height
         orientation: ListView.Horizontal
         interactive: false
         clip: false
@@ -82,9 +87,9 @@ Item {
             readonly property bool urgent: modelData?.urgent ?? false
             readonly property string label: root.icons[modelData?.name] ?? modelData?.name ?? ""
 
-            onIsActiveChanged: if (isActive) highlight.target = ws
-            Component.onCompleted: if (isActive) highlight.target = ws
-            Component.onDestruction: if (highlight.target === ws) highlight.target = null
+            onIsActiveChanged: if (isActive) root.wsTarget = ws
+            Component.onCompleted: if (isActive) root.wsTarget = ws
+            Component.onDestruction: if (root.wsTarget === ws) root.wsTarget = null
 
             width: txt.implicitWidth + Theme.s(20)
             height: Theme.barHeight
@@ -129,6 +134,53 @@ Item {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: Agents.hubFocused ? Agents.focusWorkspace(ws.modelData.id) : ws.modelData.activate()
+            }
+        }
+    }
+
+    // agents hub: click = enter it (or leave it again), like SUPER+I;
+    // right click = session switcher. Badge = sessions waiting for you.
+    Item {
+        id: hubBtn
+        x: list.width
+        width: hubIcon.implicitWidth + Theme.s(20)
+        height: Theme.barHeight
+
+        Rectangle {
+            anchors.fill: parent
+            color: Colors.hover
+            opacity: hubMouse.containsMouse && !root.hubHere ? 0.45 : 0
+            Behavior on opacity { NumberAnimation { duration: Theme.animFast } }
+        }
+
+        Text {
+            id: hubIcon
+            anchors.centerIn: parent
+            text: "\u{f06a9}"
+            color: Colors.fg
+            font.family: Theme.iconFont
+            font.pixelSize: Theme.iconSize
+            scale: root.hubHere ? 1.15 : 1.0
+            Behavior on scale { NumberAnimation { duration: Theme.animMed; easing.type: Easing.OutBack } }
+        }
+
+        Rectangle {
+            visible: Agents.needsYou > 0 && !root.hubHere
+            anchors { top: parent.top; right: parent.right; topMargin: Theme.s(4); rightMargin: Theme.s(4) }
+            width: Theme.s(7); height: width; radius: width / 2
+            color: Agents.asking > 0 ? Colors.warning : Colors.good
+        }
+
+        MouseArea {
+            id: hubMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            cursorShape: Qt.PointingHandCursor
+            onClicked: e => {
+                if (e.button === Qt.RightButton) Agents.switcherOpen = true;
+                else if (root.hubHere) Agents.focusWorkspace("previous");
+                else Agents.enterHub();
             }
         }
     }
