@@ -12,6 +12,7 @@ Item {
     id: root
 
     required property ShellScreen screen
+    signal panelRequested(string name, Item anchor)
 
     readonly property var icons: ({
             "1": "\uf120",  // terminal
@@ -139,7 +140,7 @@ Item {
     }
 
     // agents hub: click = enter it (or leave it again), like SUPER+I;
-    // right click = session switcher. Badge = sessions waiting for you.
+    // right click = session menu (panels/AgentsPanel.qml), middle click = switcher. Badge = sessions waiting for you.
     Item {
         id: hubBtn
         x: list.width
@@ -175,10 +176,11 @@ Item {
             id: hubMouse
             anchors.fill: parent
             hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
             cursorShape: Qt.PointingHandCursor
             onClicked: e => {
-                if (e.button === Qt.RightButton) Agents.switcherOpen = true;
+                if (e.button === Qt.RightButton) root.panelRequested("agents", hubBtn);
+                else if (e.button === Qt.MiddleButton) Agents.switcherOpen = true;
                 else if (root.hubHere) Agents.focusWorkspace("previous");
                 else Agents.enterHub();
             }

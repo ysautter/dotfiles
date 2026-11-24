@@ -130,7 +130,7 @@ PanelWindow {
     HyprlandFocusGrab {
         // the panels are popup windows (not Items), so list them explicitly;
         // clicks inside windows that are not part of the grab are blocked
-        windows: [bar, ...[panel_dashboard, panel_quick, panel_claude, panel_updates, panel_system].filter(p => p.visible)]
+        windows: [bar, ...[panel_dashboard, panel_quick, panel_claude, panel_updates, panel_system, panel_agents].filter(p => p.visible)]
         // nav mode arms the grab only once the bar has the keyboard; armed in
         // the same frame, Hyprland clears it right away
         active: bar.panel !== "" || bar.navGrab
@@ -161,7 +161,7 @@ PanelWindow {
             opacity: 0
             Intro { target: left; delay: 0 }
 
-            Workspaces { id: workspaces; screen: bar.screen }
+            Workspaces { id: workspaces; screen: bar.screen; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Submap { id: submap }
             WindowTitle {
                 screen: bar.screen
@@ -194,6 +194,7 @@ PanelWindow {
             Intro { target: right; delay: 160 }
 
             PresentationModule {}
+            LidModule {}
             PrivacyModule {}
             Attention { visible: bar.primary; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
             Glance { visible: bar.primary; onPanelRequested: (n, a) => bar.togglePanel(n, a) }
@@ -207,7 +208,7 @@ PanelWindow {
         id: navigator
         bar: bar
         content: content
-        panelWindows: [panel_dashboard, panel_quick, panel_claude, panel_updates, panel_system]
+        panelWindows: [panel_dashboard, panel_quick, panel_claude, panel_updates, panel_system, panel_agents]
     }
 
     Rectangle {
@@ -262,6 +263,10 @@ PanelWindow {
         }
         BarPanel { id: panel_claude;  bar: bar; name: "claude";  panelWidth: Theme.s(320); ClaudePanel {} }
         BarPanel { id: panel_updates; bar: bar; name: "updates"; panelWidth: Theme.s(420); UpdatesPanel {} }
+        BarPanel {
+            id: panel_agents; bar: bar; name: "agents"; panelWidth: Theme.s(460)
+            AgentsPanel { open: bar.panel === "agents"; onDone: bar.panel = "" }
+        }
         BarPanel { id: panel_system;  bar: bar; name: "system";  panelWidth: Theme.s(360); SystemPanel { active: bar.panel === "system" } }
     }
 
