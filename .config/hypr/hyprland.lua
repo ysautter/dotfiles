@@ -344,9 +344,7 @@ hl.bind("SUPER + CTRL + left",   hl.dsp.window.move({ workspace = "-1", follow =
 hl.bind("SUPER + SHIFT + right", hl.dsp.window.move({ workspace = "m+1" }))
 hl.bind("SUPER + SHIFT + left",  hl.dsp.window.move({ workspace = "m-1" }))
 
--- FOCUS MONITORS
-hl.bind("SUPER + ALT + up",   hl.dsp.focus({ monitor = "u" }))
-hl.bind("SUPER + ALT + down", hl.dsp.focus({ monitor = "d" }))
+-- (SUPER+ALT+up/down = volume, see MEDIA KEYS)
 
 -- MOVING / RESIZING WITH MOUSE
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(),   { mouse = true })
@@ -415,9 +413,25 @@ hl.bind("SUPER + CTRL + down",  hl.dsp.window.resize({ x = 0, y = 20, relative =
 hl.bind("SUPER + ALT + space",        exec("playerctl play-pause"))
 hl.bind("SUPER + ALT + bracketright", exec("playerctl next"))
 hl.bind("SUPER + ALT + bracketleft",  exec("playerctl previous"))
--- hold SUPER+ALT and scroll: volume (2% steps, capped at 100%)
+-- hold SUPER+ALT and scroll: volume (2% steps, capped at 100%).
+-- Mouse wheel only: Hyprland ignores touchpad scrolling for mouse_up/down binds.
 hl.bind("SUPER + ALT + mouse_up",     exec("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 2%+"))
 hl.bind("SUPER + ALT + mouse_down",   exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%-"))
+-- SUPER+ALT+up/down: volume (hold to repeat)
+hl.bind("SUPER + ALT + up",   exec("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 2%+"), { repeating = true })
+hl.bind("SUPER + ALT + down", exec("wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%-"), { repeating = true })
+-- touchpad: 3-finger vertical swipe changes volume live (up = louder, capped at 100%)
+local volAcc = 0
+local function volSwipe(e)
+    volAcc = volAcc - 0.25 * e.delta.y
+    if math.abs(volAcc) >= 1 then
+        local step = math.floor(math.abs(volAcc))
+        hl.exec_cmd(string.format("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ %d%%%s", step, volAcc > 0 and "+" or "-"))
+        volAcc = volAcc > 0 and volAcc - step or volAcc + step
+    end
+end
+hl.gesture({ fingers = 3, direction = "vertical",
+    action = { start = function(e) volAcc = 0; volSwipe(e) end, update = volSwipe } })
 hl.bind("XF86AudioRaiseVolume",  exec("pactl set-sink-volume @DEFAULT_SINK@ +5%"))
 hl.bind("XF86AudioLowerVolume",  exec("pactl set-sink-volume @DEFAULT_SINK@ -5%"))
 hl.bind("XF86AudioMute",         exec("pactl set-sink-mute @DEFAULT_SINK@ toggle"))
