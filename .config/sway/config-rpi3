@@ -1,7 +1,11 @@
-# sway config – used on rpi3 (Raspberry Pi 3). Hyprland needs GLES >= 3.0,
+# sway config for rpi3 (Raspberry Pi 3). Hyprland needs GLES >= 3.0,
 # the Pi's VC4 GPU only has GLES 2.0 -> sway (wlroots) renders on the GPU.
+# Activated on the Pi by an untracked symlink:  ln -s config-rpi3 ~/.config/sway/config
+# (the tower keeps its own untracked ~/.config/sway/config).
+# Firefox on rpi3 needs software rendering (user.js: gfx.webrender.software,
+# widget.dmabuf.force-enabled=false), otherwise sway crashes in the VC4 driver.
 # Keybinds follow ~/.config/hypr/hyprland.lua where possible.
-# Reload: SUPER+SHIFT+R   Check: sway -C -c ~/.config/sway/config
+# Reload: SUPER+SHIFT+R
 
 set $mod Mod4
 set $term foot
