@@ -264,6 +264,6 @@ alias t=~/.local/bin/tmux-pick   # tmux session picker (also prefix+f / SUPER+SH
 
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init - zsh)"
+command -v pyenv >/dev/null && eval "$(pyenv init - zsh)"
 
 command -v fnm >/dev/null && eval "$(fnm env --use-on-cd --shell zsh)"
