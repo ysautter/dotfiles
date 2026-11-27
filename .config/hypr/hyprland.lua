@@ -199,6 +199,14 @@ hl.animation({ leaf = "border",     enabled = true, speed = 3, bezier = "default
 hl.animation({ leaf = "fadeIn",     enabled = true, speed = 3, bezier = "default" })
 hl.animation({ leaf = "workspaces", enabled = true, speed = 3, bezier = "default", style = "slidefade" }) -- keep in sync with wsAnimDefault (agent hub)
 
+-- Raspberry Pi 3 (rpi3): VC4 GPU, GLES 2.0 only, 1 GB RAM -> no blur/shadows/animations
+if host == "rpi3" then
+    hl.config({
+        decoration = { blur = { enabled = false }, shadow = { enabled = false } },
+        animations = { enabled = false },
+    })
+end
+
 ----------------------
 ---- WINDOW RULES ----
 ----------------------
